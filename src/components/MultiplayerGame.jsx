@@ -171,19 +171,34 @@ export function MultiplayerGame({
     return () => clearInterval(spawnInterval);
   }, [isMobile]);
 
-  // Sound triggers for card actions
+  const [displayedTopCard, setDisplayedTopCard] = useState(topCard);
+
+  // Sound triggers for card actions & Delayed visual update of top discard card for smooth landing
   useEffect(() => {
     if (!topCard) return;
     if (topCard.id !== prevTopCardId.current) {
+      const isFirst = !prevTopCardId.current;
       prevTopCardId.current = topCard.id;
-      if (topCard.value === 'skip') {
-        soundManager.skip();
-      } else if (topCard.value === 'reverse') {
-        soundManager.reverse();
-      } else if (topCard.value === '+2' || topCard.value === '+4') {
-        soundManager.drawStack(drawStackCount || 2);
+
+      if (isFirst) {
+        setDisplayedTopCard(topCard);
       } else {
-        soundManager.playCard();
+        // Keep previous card showing while flying card animation is traveling across screen
+        const timer = setTimeout(() => {
+          setDisplayedTopCard(topCard);
+        }, 380);
+        
+        if (topCard.value === 'skip') {
+          soundManager.skip();
+        } else if (topCard.value === 'reverse') {
+          soundManager.reverse();
+        } else if (topCard.value === '+2' || topCard.value === '+4') {
+          soundManager.drawStack(drawStackCount || 2);
+        } else {
+          soundManager.playCard();
+        }
+
+        return () => clearTimeout(timer);
       }
     }
   }, [topCard?.id, topCard?.value, drawStackCount]);
@@ -556,8 +571,8 @@ export function MultiplayerGame({
 
         {/* Discard pile */}
         <div ref={discardRef} style={{ textAlign: 'center' }}>
-          {topCard
-            ? <img src={`/cards/${topCard.file}`} alt={topCard.name} style={{ width: sz.discardW, height: sz.discardH, borderRadius: '6px', filter: 'drop-shadow(0 8px 20px rgba(0,0,0,0.8))' }} />
+          {(displayedTopCard || topCard)
+            ? <img src={`/cards/${(displayedTopCard || topCard).file}`} alt={(displayedTopCard || topCard).name} style={{ width: sz.discardW, height: sz.discardH, borderRadius: '6px', filter: 'drop-shadow(0 8px 20px rgba(0,0,0,0.8))' }} />
             : <div style={{ width: sz.discardW, height: sz.discardH, borderRadius: '8px', border: '2px dashed rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.2)', fontSize: '0.7rem' }}>…</div>
           }
           <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.3)', marginTop: '0.3rem', letterSpacing: '0.07em' }}>DESCARTE</div>
@@ -662,18 +677,16 @@ export function MultiplayerGame({
             </div>
           )}
 
-          {/* MUNO button (Sitting prominently on top of cards) */}
+          {/* MUNO button (Sitting prominently on top of cards with heartbeat pulsation) */}
           {canShoutMuno && (
-            <button onClick={onShoutMuno} style={{
+            <button onClick={onShoutMuno} className="muno-button-pulsing" style={{
               background: 'linear-gradient(135deg, #ff3b5c, #ff9f43)',
               border: '2px solid #ffffff',
               borderRadius: '20px', color: '#fff',
               padding: isMobile ? '0.3rem 1.1rem' : '0.25rem 0.9rem',
               fontSize: isMobile ? '0.85rem' : '0.78rem',
               fontWeight: 900, cursor: 'pointer',
-              boxShadow: '0 4px 20px rgba(255,59,92,0.9), 0 0 12px rgba(255,255,255,0.5)',
               letterSpacing: '0.04em',
-              animation: 'pulse 1.2s infinite',
               zIndex: 5001,
             }}>
               ¡MUNO!

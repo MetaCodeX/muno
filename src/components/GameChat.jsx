@@ -3,6 +3,8 @@ import { Send, ChevronRight, ChevronLeft } from 'lucide-react';
 
 export function GameChat({ messages, onSend, myColor, myUsername, isOpen, onToggle }) {
   const [input, setInput] = useState('');
+  const [unreadCount, setUnreadCount] = useState(0);
+  const prevMessagesLen = useRef(messages.length);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -10,7 +12,15 @@ export function GameChat({ messages, onSend, myColor, myUsername, isOpen, onTogg
   const panelWidth = isMobile ? '85vw' : '280px';
 
   useEffect(() => {
+    if (!isOpen && messages.length > prevMessagesLen.current) {
+      setUnreadCount(prev => prev + (messages.length - prevMessagesLen.current));
+    }
+    prevMessagesLen.current = messages.length;
+  }, [messages, isOpen]);
+
+  useEffect(() => {
     if (isOpen) {
+      setUnreadCount(0);
       setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 60);
     }
   }, [messages, isOpen]);
@@ -26,7 +36,7 @@ export function GameChat({ messages, onSend, myColor, myUsername, isOpen, onTogg
 
   return (
     <>
-      {/* Collapse/expand tab */}
+      {/* Collapse/expand tab with unread red notification dot */}
       <button
         onClick={onToggle}
         title={isOpen ? 'Cerrar chat' : 'Abrir chat'}
@@ -52,6 +62,19 @@ export function GameChat({ messages, onSend, myColor, myUsername, isOpen, onTogg
           boxShadow: '-2px 0 10px rgba(0,0,0,0.5)',
         }}
       >
+        {!isOpen && unreadCount > 0 && (
+          <span style={{
+            position: 'absolute',
+            top: '6px',
+            left: '6px',
+            width: '9px',
+            height: '9px',
+            borderRadius: '50%',
+            background: '#ff3b5c',
+            boxShadow: '0 0 10px #ff3b5c',
+            animation: 'pulse 1.2s infinite'
+          }} />
+        )}
         {isOpen ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
       </button>
 
