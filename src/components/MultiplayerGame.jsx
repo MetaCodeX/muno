@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Zap, Crown, LogOut } from 'lucide-react';
+import { Zap, Crown, LogOut, Trophy } from 'lucide-react';
 import { soundManager } from '../utils/soundManager';
 
 const COLOR_MAP = {
@@ -63,6 +63,7 @@ export function MultiplayerGame({
   onRematch,
   onLeave,
   onTimeout,
+  onOpenLeaderboard,
 }) {
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [pendingCard, setPendingCard] = useState(null);
@@ -462,6 +463,18 @@ export function MultiplayerGame({
       }}>
         <span style={{ fontSize: isMobile ? '0.55rem' : '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.75)', fontFamily: 'var(--font-code)', letterSpacing: '0.12em' }}>{roomCode}</span>
         {isAdmin && <Crown size={isMobile ? 8 : 10} color="#ffc107" />}
+        <button
+          onClick={onOpenLeaderboard}
+          title="Tabla de Clasificación & Logros"
+          style={{
+            background: 'rgba(255,193,7,0.12)', border: '1px solid rgba(255,193,7,0.3)',
+            borderRadius: '6px', color: '#ffc107', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '0.15rem 0.35rem', marginLeft: '0.2rem'
+          }}
+        >
+          <Trophy size={isMobile ? 9 : 12} />
+        </button>
         <span style={{ fontSize: isMobile ? '0.48rem' : '0.58rem', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-code)', marginLeft: '0.2rem' }}>v0.9.9.888</span>
       </div>
 

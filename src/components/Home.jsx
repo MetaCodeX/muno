@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { FallingCards } from './FallingCards';
 import { MunoLogo } from './MunoLogo';
 
-export function Home({ savedUsername, initialJoinCode, initialTab, onCreateRoom, onJoinRoom, loading, error }) {
+export function Home({ savedUsername, initialJoinCode, initialTab, onCreateRoom, onJoinRoom, onOpenLeaderboard, loading, error }) {
   const [username, setUsername] = useState(savedUsername || '');
   const [joinCode, setJoinCode] = useState(initialJoinCode || '');
   const [tab, setTab] = useState(initialJoinCode ? 'join' : (initialTab || 'join'));
@@ -294,6 +294,30 @@ export function Home({ savedUsername, initialJoinCode, initialTab, onCreateRoom,
                 {error}
               </div>
             )}
+            {/* Leaderboard Trigger Button */}
+            <div style={{ marginTop: '1.1rem', textAlign: 'center' }}>
+              <button
+                type="button"
+                onClick={onOpenLeaderboard}
+                style={{
+                  background: 'rgba(255, 193, 7, 0.08)',
+                  border: '1px solid rgba(255, 193, 7, 0.28)',
+                  borderRadius: '12px',
+                  color: '#ffc107',
+                  padding: '0.45rem 1rem',
+                  fontSize: '0.78rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  transition: 'all 0.2s ease',
+                  boxShadow: '0 4px 16px rgba(255, 193, 7, 0.12)'
+                }}
+              >
+                🏆 Tabla de Clasificación & Logros
+              </button>
+            </div>
           </div>
         </div>
 

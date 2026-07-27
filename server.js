@@ -28,6 +28,61 @@ const rooms = new Map();
 
 // playerSessions: Map<sessionId, { roomCode, playerIdx, username }>
 const playerSessions = new Map();
+const userProfiles = new Map(); // userKey -> { userKey, username, wins, gamesPlayed, achievements, createdAt, lastSeenAt }
+
+const ACHIEVEMENTS_DEF = {
+  first_win: { id: 'first_win', name: 'Primera Victoria', icon: '🏆', desc: 'Gana tu primera partida de MUNO!' },
+  veteran_5: { id: 'veteran_5', name: 'Veterano (5 Partidas)', icon: '⚔️', desc: 'Completa 5 partidas de MUNO!' },
+  master_10: { id: 'master_10', name: 'Maestro MUNO (10 Victorias)', icon: '👑', desc: 'Acumula 10 victorias en el servidor.' },
+  win_streak_3: { id: 'win_streak_3', name: 'Racha Implacable (3 Rondas)', icon: '🔥', desc: 'Consigue una racha de victorias.' },
+  duelist_1v1: { id: 'duelist_1v1', name: 'Dominador 1v1', icon: '⚡', desc: 'Gana un duelo 1v1 mano a mano.' },
+};
+
+function getOrCreateUserProfile(userKey, username) {
+  if (!userKey || typeof userKey !== 'string') return null;
+  let profile = userProfiles.get(userKey);
+  if (!profile) {
+    profile = {
+      userKey,
+      username: username || 'Jugador MUNO',
+      wins: 0,
+      gamesPlayed: 0,
+      achievements: [],
+      createdAt: Date.now(),
+      lastSeenAt: Date.now()
+    };
+    userProfiles.set(userKey, profile);
+  } else {
+    if (username && username !== profile.username) {
+      profile.username = username;
+    }
+    profile.lastSeenAt = Date.now();
+  }
+  saveRoomsToDisk();
+  return profile;
+}
+
+function getPublicLeaderboard() {
+  const sorted = Array.from(userProfiles.values())
+    .filter(p => p.username && p.gamesPlayed > 0)
+    .sort((a, b) => {
+      if (b.wins !== a.wins) return b.wins - a.wins;
+      const rateA = a.gamesPlayed > 0 ? (a.wins / a.gamesPlayed) : 0;
+      const rateB = b.gamesPlayed > 0 ? (b.wins / b.gamesPlayed) : 0;
+      return rateB - rateA;
+    })
+    .slice(0, 50);
+
+  return sorted.map((p, idx) => ({
+    rank: idx + 1,
+    username: p.username,
+    wins: p.wins,
+    gamesPlayed: p.gamesPlayed,
+    winRate: p.gamesPlayed > 0 ? Math.round((p.wins / p.gamesPlayed) * 100) : 0,
+    achievements: (p.achievements || []).map(id => ACHIEVEMENTS_DEF[id]).filter(Boolean),
+    lastSeenAt: p.lastSeenAt
+  }));
+}
 
 const ROOMS_FILE = path.join(__dirname, 'rooms_backup.json');
 
@@ -35,7 +90,8 @@ function saveRoomsToDisk() {
   try {
     const data = {
       rooms: Array.from(rooms.entries()),
-      playerSessions: Array.from(playerSessions.entries())
+      playerSessions: Array.from(playerSessions.entries()),
+      userProfiles: Array.from(userProfiles.entries())
     };
     fs.writeFileSync(ROOMS_FILE, JSON.stringify(data, null, 2));
   } catch (err) {
@@ -62,7 +118,12 @@ function loadRoomsFromDisk() {
         playerSessions.set(sid, sess);
       }
     }
-    console.log(`[PERSISTENCE] Restored ${rooms.size} active rooms from disk.`);
+    if (parsed.userProfiles) {
+      for (const [ukey, prof] of parsed.userProfiles) {
+        userProfiles.set(ukey, prof);
+      }
+    }
+    console.log(`[PERSISTENCE] Restored ${rooms.size} active rooms and ${userProfiles.size} user profiles from disk.`);
   } catch (err) {
     console.error('Error loading room backup:', err);
   }
@@ -419,13 +480,14 @@ io.on('connection', (socket) => {
   });
 
   // ── Create Room ─────────────────────────────────────────────────────────────
-  socket.on('room:create', ({ username, sessionId: existingSession, deviceId }) => {
+  socket.on('room:create', ({ username, sessionId: existingSession, deviceId, userKey }) => {
     const username_ = (username || 'Jugador').slice(0, 20).trim() || 'Jugador';
     const sessionId = existingSession || generateSessionId();
     const room = createRoom(sessionId, username_);
 
     const color = PLAYER_COLORS[0];
-    const player = { sessionId, deviceId, username: username_, color, connected: true, socketId: socket.id, playerIdx: 0 };
+    const player = { sessionId, deviceId, userKey, username: username_, color, connected: true, socketId: socket.id, playerIdx: 0 };
+    if (userKey) getOrCreateUserProfile(userKey, username_);
     room.players.push(player);
     playerSessions.set(sessionId, { roomCode: room.code, playerIdx: 0 });
 
@@ -458,13 +520,18 @@ io.on('connection', (socket) => {
       player.connected = true;
       player.socketId = socket.id;
       if (deviceId) player.deviceId = deviceId;
+      if (userKey) {
+        player.userKey = userKey;
+        getOrCreateUserProfile(userKey, username_);
+      }
       playerSessions.set(sessionId, { roomCode: code, playerIdx: player.playerIdx });
     } else {
       // New player joining (even mid-game if link is open!)
       sessionId = generateSessionId();
       const idx = room.players.length;
       const color = PLAYER_COLORS[idx % PLAYER_COLORS.length];
-      player = { sessionId, deviceId, username: username_, color, connected: true, socketId: socket.id, playerIdx: idx };
+      player = { sessionId, deviceId, userKey, username: username_, color, connected: true, socketId: socket.id, playerIdx: idx };
+      if (userKey) getOrCreateUserProfile(userKey, username_);
       room.players.push(player);
       playerSessions.set(sessionId, { roomCode: code, playerIdx: idx });
 
@@ -653,6 +720,27 @@ function purgeDisconnectedPlayers(room) {
       gs.winner = myIdx;
       room.status = 'finished';
       const winnerPlayer = room.players[myIdx];
+
+      // Record statistics and achievements for user profiles
+      room.players.forEach((p, pIdx) => {
+        const ukey = p.userKey || p.deviceId;
+        if (!ukey) return;
+        const prof = getOrCreateUserProfile(ukey, p.username);
+        if (prof) {
+          prof.gamesPlayed = (prof.gamesPlayed || 0) + 1;
+          if (pIdx === myIdx) {
+            prof.wins = (prof.wins || 0) + 1;
+            if (!prof.achievements) prof.achievements = [];
+            if (!prof.achievements.includes('first_win')) prof.achievements.push('first_win');
+            if (prof.gamesPlayed >= 5 && !prof.achievements.includes('veteran_5')) prof.achievements.push('veteran_5');
+            if (prof.wins >= 10 && !prof.achievements.includes('master_10')) prof.achievements.push('master_10');
+            if (room.players.length === 2 && !prof.achievements.includes('duelist_1v1')) prof.achievements.push('duelist_1v1');
+          }
+        }
+      });
+      saveRoomsToDisk();
+      io.emit('leaderboard:update', getPublicLeaderboard());
+
       io.to(room.code).emit('game:winner', { playerIdx: myIdx, username: winnerPlayer.username, color: winnerPlayer.color });
       io.to(room.code).emit('chat:message', { system: true, text: `🏆 ¡${winnerPlayer.username} ganó la partida!`, timestamp: Date.now() });
       broadcastGameState(room);
@@ -902,6 +990,28 @@ function purgeDisconnectedPlayers(room) {
     if (old !== newName) {
       io.to(room.code).emit('chat:message', { system: true, text: `${old} cambió su nombre a ${newName}.`, timestamp: Date.now() });
     }
+  });
+
+  // ── Leaderboard & User Profile Events ─────────────────────────────────────────
+  socket.on('leaderboard:get', (ack) => {
+    const data = getPublicLeaderboard();
+    if (typeof ack === 'function') ack(data);
+    else socket.emit('leaderboard:data', data);
+  });
+
+  socket.on('user:getProfile', ({ userKey, username }, ack) => {
+    if (!userKey) return;
+    const prof = getOrCreateUserProfile(userKey, username);
+    if (typeof ack === 'function') ack(prof);
+    else socket.emit('user:profileData', prof);
+  });
+
+  socket.on('user:importKey', ({ newKey, username }, ack) => {
+    if (!newKey) return;
+    const prof = getOrCreateUserProfile(newKey, username);
+    if (typeof ack === 'function') ack({ success: true, profile: prof });
+    else socket.emit('user:profileData', prof);
+    socket.emit('leaderboard:data', getPublicLeaderboard());
   });
 
   // ── Disconnect ───────────────────────────────────────────────────────────────

@@ -3,6 +3,7 @@
 // and re-opened tabs ALWAYS maintain identity and never create duplicate profiles.
 
 const COOKIE_NAME = 'muno_device_id';
+const USER_KEY_NAME = 'muno_user_key';
 const SESSION_KEY = 'muno_persistent_session';
 const USERNAME_KEY = 'muno_user_name';
 
@@ -77,4 +78,31 @@ export function loadUsername() {
     return localStorage.getItem(USERNAME_KEY) || getCookie('muno_saved_username') || '';
   } catch {}
   return '';
+}
+
+export function getOrCreateUserKey() {
+  let userKey = getCookie(USER_KEY_NAME);
+  if (!userKey) {
+    try {
+      userKey = localStorage.getItem(USER_KEY_NAME);
+    } catch {}
+  }
+  if (!userKey) {
+    userKey = 'usr_' + 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+  setUserKey(userKey);
+  return userKey;
+}
+
+export function setUserKey(key) {
+  if (!key || typeof key !== 'string') return;
+  const cleanKey = key.trim();
+  setCookie(USER_KEY_NAME, cleanKey, 365);
+  try {
+    localStorage.setItem(USER_KEY_NAME, cleanKey);
+  } catch {}
 }
