@@ -2,9 +2,17 @@
 
 Todas las mejoras, correcciones y actualizaciones del motor de juego **MUNO!** organizadas cronológicamente.
 
+## 🚀 [v0.9.9.888] - 2026-07-26 *(Versión Actual de Producción)*
+
+### 🎨 Mejoras de Interfaz, Animación y Notificaciones
+- **🔴 Punto Rojo de Notificación en Chat**: Indicador en vivo en el botón lateral del chat que notifica mensajes entrantes sin leer.
+- **💓 Botón ¡MUNO! Palpitante**: Animación neón estilo latido (`pulseMunoButton`) al estar en zona de grito ¡MUNO!
+- **🎴 Física Visual del Descarte Retardada**: Retraso de 380ms en el cambio de carta base del descarte para que la carta previa se mantenga visible mientras la carta en vuelo viaja por pantalla.
+- **🛑 Corte Inmediato al 5º Robo**: Tras extraer la 5ª carta, el turno pasa automáticamente al siguiente participante.
+
 ---
 
-## 🚀 [v0.9.9.88] - 2026-07-26 *(Versión Actual de Producción)*
+## 🚀 [v0.9.9.88] - 2026-07-26
 
 ### 🛠️ Nuevas Mecánicas de Juego y Balance
 - **🚫 Límite de 5 Robos por Turno (Hard Server Enforcement)**:

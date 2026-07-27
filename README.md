@@ -2,7 +2,7 @@
 
 <p align="center">
   <b>By Dr.MetaCodeX</b><br>
-  <code>Versión v0.9.9.88</code> · <code>En Vivo: muno.macrostasis.dev</code>
+  <code>Versión v0.9.9.888</code> · <code>En Vivo: muno.macrostasis.dev</code>
 </p>
 
 ---

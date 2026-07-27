@@ -462,7 +462,7 @@ export function MultiplayerGame({
       }}>
         <span style={{ fontSize: isMobile ? '0.55rem' : '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.75)', fontFamily: 'var(--font-code)', letterSpacing: '0.12em' }}>{roomCode}</span>
         {isAdmin && <Crown size={isMobile ? 8 : 10} color="#ffc107" />}
-        <span style={{ fontSize: isMobile ? '0.48rem' : '0.58rem', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-code)', marginLeft: '0.2rem' }}>v0.9.9.88</span>
+        <span style={{ fontSize: isMobile ? '0.48rem' : '0.58rem', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-code)', marginLeft: '0.2rem' }}>v0.9.9.888</span>
       </div>
 
       {/* Leave button */}
