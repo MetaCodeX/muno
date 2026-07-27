@@ -30,58 +30,30 @@ const rooms = new Map();
 const playerSessions = new Map();
 const userProfiles = new Map(); // userKey -> { userKey, username, wins, gamesPlayed, achievements, createdAt, lastSeenAt }
 
-const ACHIEVEMENTS_DEF = {
-  first_win: { id: 'first_win', name: 'Primera Victoria', icon: '🏆', desc: 'Gana tu primera partida de MUNO!' },
-  veteran_5: { id: 'veteran_5', name: 'Veterano (5 Partidas)', icon: '⚔️', desc: 'Completa 5 partidas de MUNO!' },
-  master_10: { id: 'master_10', name: 'Maestro MUNO (10 Victorias)', icon: '👑', desc: 'Acumula 10 victorias en el servidor.' },
-  win_streak_3: { id: 'win_streak_3', name: 'Racha Implacable (3 Rondas)', icon: '🔥', desc: 'Consigue una racha de victorias.' },
-  duelist_1v1: { id: 'duelist_1v1', name: 'Dominador 1v1', icon: '⚡', desc: 'Gana un duelo 1v1 mano a mano.' },
-};
+const { execSync } = require('child_process');
+
+function getPublicLeaderboard() {
+  try {
+    const cmd = `python3 -c "import db_service, json; print(json.dumps(db_service.get_leaderboard()))"`;
+    const output = execSync(cmd, { cwd: __dirname }).toString();
+    return JSON.parse(output);
+  } catch (err) {
+    console.error('Error querying Python SQLite leaderboard:', err);
+    return [];
+  }
+}
 
 function getOrCreateUserProfile(userKey, username) {
   if (!userKey || typeof userKey !== 'string') return null;
-  let profile = userProfiles.get(userKey);
-  if (!profile) {
-    profile = {
-      userKey,
-      username: username || 'Jugador MUNO',
-      wins: 0,
-      gamesPlayed: 0,
-      achievements: [],
-      createdAt: Date.now(),
-      lastSeenAt: Date.now()
-    };
-    userProfiles.set(userKey, profile);
-  } else {
-    if (username && username !== profile.username) {
-      profile.username = username;
-    }
-    profile.lastSeenAt = Date.now();
+  try {
+    const safeName = (username || 'Jugador').replace(/'/g, "");
+    const cmd = `python3 -c "import db_service, json; print(json.dumps(db_service.get_or_create_user('${userKey}', '${safeName}')))"`;
+    const output = execSync(cmd, { cwd: __dirname }).toString();
+    return JSON.parse(output);
+  } catch (err) {
+    console.error('Error fetching/creating user in Python DB:', err);
+    return { userKey, username, wins: 0, gamesPlayed: 0, achievements: [] };
   }
-  saveRoomsToDisk();
-  return profile;
-}
-
-function getPublicLeaderboard() {
-  const sorted = Array.from(userProfiles.values())
-    .filter(p => p.username && p.gamesPlayed > 0)
-    .sort((a, b) => {
-      if (b.wins !== a.wins) return b.wins - a.wins;
-      const rateA = a.gamesPlayed > 0 ? (a.wins / a.gamesPlayed) : 0;
-      const rateB = b.gamesPlayed > 0 ? (b.wins / b.gamesPlayed) : 0;
-      return rateB - rateA;
-    })
-    .slice(0, 50);
-
-  return sorted.map((p, idx) => ({
-    rank: idx + 1,
-    username: p.username,
-    wins: p.wins,
-    gamesPlayed: p.gamesPlayed,
-    winRate: p.gamesPlayed > 0 ? Math.round((p.wins / p.gamesPlayed) * 100) : 0,
-    achievements: (p.achievements || []).map(id => ACHIEVEMENTS_DEF[id]).filter(Boolean),
-    lastSeenAt: p.lastSeenAt
-  }));
 }
 
 const ROOMS_FILE = path.join(__dirname, 'rooms_backup.json');
@@ -721,23 +693,16 @@ function purgeDisconnectedPlayers(room) {
       room.status = 'finished';
       const winnerPlayer = room.players[myIdx];
 
-      // Record statistics and achievements for user profiles
-      room.players.forEach((p, pIdx) => {
-        const ukey = p.userKey || p.deviceId;
-        if (!ukey) return;
-        const prof = getOrCreateUserProfile(ukey, p.username);
-        if (prof) {
-          prof.gamesPlayed = (prof.gamesPlayed || 0) + 1;
-          if (pIdx === myIdx) {
-            prof.wins = (prof.wins || 0) + 1;
-            if (!prof.achievements) prof.achievements = [];
-            if (!prof.achievements.includes('first_win')) prof.achievements.push('first_win');
-            if (prof.gamesPlayed >= 5 && !prof.achievements.includes('veteran_5')) prof.achievements.push('veteran_5');
-            if (prof.wins >= 10 && !prof.achievements.includes('master_10')) prof.achievements.push('master_10');
-            if (room.players.length === 2 && !prof.achievements.includes('duelist_1v1')) prof.achievements.push('duelist_1v1');
-          }
-        }
-      });
+      // Record statistics and achievements in Python SQLite Database
+      const playerKeysNames = room.players.map(p => [p.userKey || p.deviceId, p.username]);
+      const winnerKey = winnerPlayer.userKey || winnerPlayer.deviceId;
+      try {
+        const payload = JSON.stringify(playerKeysNames).replace(/'/g, "");
+        const cmd = `python3 -c "import db_service; db_service.record_game_win('${room.code}', '${winnerKey}', '${winnerPlayer.username.replace(/'/g, "")}', ${payload})"`;
+        execSync(cmd, { cwd: __dirname });
+      } catch (err) {
+        console.error('Error recording win in Python DB:', err);
+      }
       saveRoomsToDisk();
       io.emit('leaderboard:update', getPublicLeaderboard());
 

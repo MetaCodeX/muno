@@ -4,6 +4,7 @@ import { Lobby } from './components/Lobby';
 import { MultiplayerGame } from './components/MultiplayerGame';
 import { GameChat } from './components/GameChat';
 import { LeaderboardModal } from './components/LeaderboardModal';
+import { ProfileModal } from './components/ProfileModal';
 import { useMultiplayerSocket } from './utils/useMultiplayer';
 import { saveSession, loadSession, clearSession, saveUsername, loadUsername, getOrCreateDeviceId, getOrCreateUserKey, setUserKey } from './utils/sessionCookies';
 import { soundManager } from './utils/soundManager';
@@ -52,6 +53,7 @@ export default function App() {
 
   // Leaderboard & User Key state
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [leaderboardData, setLeaderboardData] = useState([]);
   const [myProfile, setMyProfile] = useState(null);
   const [userKey, setUserKeyState] = useState(() => getOrCreateUserKey());
@@ -370,7 +372,9 @@ export default function App() {
           pendingJoinCode={pendingJoinCode}
           onCreateRoom={handleCreateRoom}
           onJoinRoom={handleJoinRoom}
-          onOpenLeaderboard={() => setLeaderboardOpen(true)}
+          leaderboard={leaderboardData}
+          onOpenProfile={() => setProfileOpen(true)}
+          onRefreshLeaderboard={() => emit('leaderboard:get')}
           loading={loading}
           error={error}
         />
@@ -411,7 +415,6 @@ export default function App() {
             onLeave={handleLeave}
             onPassTurn={handlePassTurn}
             onTimeout={handleTimeout}
-            onOpenLeaderboard={() => setLeaderboardOpen(true)}
           />
           <GameChat
             messages={chatMessages}
@@ -435,6 +438,15 @@ export default function App() {
         onRefreshLeaderboard={() => emit('leaderboard:get')}
       />
 
+      {/* Profile Modal */}
+      <ProfileModal
+        isOpen={profileOpen}
+        onClose={() => setProfileOpen(false)}
+        myProfile={myProfile}
+        myUserKey={userKey}
+        onImportUserKey={handleImportUserKey}
+      />
+
       {/* Loading overlay */}
       {loading && screen === 'home' && (
         <div style={{
@@ -455,7 +467,7 @@ export default function App() {
 }
 
 // Wrapper to pre-fill invite code in Home
-function HomeWithPrefill({ savedUsername, pendingJoinCode, onCreateRoom, onJoinRoom, onOpenLeaderboard, loading, error }) {
+function HomeWithPrefill({ savedUsername, pendingJoinCode, onCreateRoom, onJoinRoom, leaderboard, onOpenProfile, onRefreshLeaderboard, loading, error }) {
   const [prefillCode] = useState(() => {
     const p = sessionStorage.getItem('pendingJoinCode') || getInviteCode();
     if (p) sessionStorage.removeItem('pendingJoinCode');
@@ -469,7 +481,9 @@ function HomeWithPrefill({ savedUsername, pendingJoinCode, onCreateRoom, onJoinR
       initialTab={prefillCode ? 'join' : 'join'}
       onCreateRoom={onCreateRoom}
       onJoinRoom={onJoinRoom}
-      onOpenLeaderboard={onOpenLeaderboard}
+      leaderboard={leaderboard}
+      onOpenProfile={onOpenProfile}
+      onRefreshLeaderboard={onRefreshLeaderboard}
       loading={loading}
       error={error}
     />

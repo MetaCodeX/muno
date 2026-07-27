@@ -12,16 +12,16 @@
             "sessionId": "c6b7b0e605b72e4d22185479a72e4b05",
             "username": "MetaCodeX",
             "color": "#00e676",
-            "connected": true,
-            "socketId": "hmBeCoG4tzp7jXCgAAHi",
+            "connected": false,
+            "socketId": null,
             "playerIdx": 0
           },
           {
             "sessionId": "5d9996a8e89aebdd9e1322124ec803bc",
             "username": "GABY",
             "color": "#0088ff",
-            "connected": true,
-            "socketId": "_ifb0lhbzv6hnogTAAHk",
+            "connected": false,
+            "socketId": null,
             "playerIdx": 1
           }
         ],
@@ -5314,7 +5314,7 @@
       "usr_alberto_muneador",
       {
         "userKey": "usr_alberto_muneador",
-        "username": "Alberto Instant\u00e1neo",
+        "username": "Alberto Instantáneo",
         "wins": 6,
         "gamesPlayed": 18,
         "achievements": [
@@ -5428,6 +5428,18 @@
         ],
         "createdAt": 1785110000000,
         "lastSeenAt": 1785150000000
+      }
+    ],
+    [
+      "usr_40b1a62e-a91c-468f-a23e-8cf59f97a19d",
+      {
+        "userKey": "usr_40b1a62e-a91c-468f-a23e-8cf59f97a19d",
+        "username": "MetaCodeX",
+        "wins": 0,
+        "gamesPlayed": 0,
+        "achievements": [],
+        "createdAt": 1785159988167,
+        "lastSeenAt": 1785159988167
       }
     ]
   ]
