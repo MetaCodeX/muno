@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="242"
+   height="362"
+   viewBox="0 0 64.029165 95.779169"
+   version="1.1"
+   id="svg2758"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs id="defs2755">
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@700;800;900&amp;display=swap');
+      .puno-exact-text {
+        font-family: 'Bai Jamjuree', 'Outfit', -apple-system, sans-serif;
+        font-weight: 900;
+        font-size: 74.6667px;
+        line-height: 1.25;
+        fill: #ffffff;
+      }
+    </style>
+  </defs>
+  <g id="layer1">
+    <!-- Outer Card White Border -->
+    <rect
+       width="63.5"
+       height="95.25"
+       rx="10.583333"
+       ry="10.583333"
+       x="0.2645838"
+       y="0.26458278"
+       id="rect2987-8-5-81-2-4-9"
+       style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.529167;stroke-miterlimit:4;stroke-dasharray:none" />
+
+    <!-- Inner Card Black Fill -->
+    <rect
+       width="52.916664"
+       height="84.666664"
+       rx="5.2916665"
+       ry="5.2916665"
+       x="5.5562506"
+       y="5.5562496"
+       id="rect3757-26-33-5-9-0-0"
+       style="fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:none;stroke-width:0.264583" />
+
+    <!-- Original Puno Red Oval Path -->
+    <path
+       d="m 47.889583,21.431219 c -17.761188,0 -32.941259,10.950903 -39.2244785,26.458333 -1.9877352,4.905872 -3.1088541,10.256139 -3.1088541,15.875 0,5.845016 4.7383166,10.583333 10.5833336,10.583333 17.761188,0 32.941259,-10.950903 39.224478,-26.458333 1.987735,-4.905872 3.108854,-10.256139 3.108854,-15.875 0,-5.845016 -4.738317,-10.583333 -10.583333,-10.583333 z"
+       id="path3773-0-4-8-8-7-9-0-03-8-0-6"
+       style="fill:#ff5555;stroke:none;stroke-width:1.05833;stroke-miterlimit:4;stroke-dasharray:none;fill-opacity:1;stroke-opacity:1" />
+
+    <!-- MμN0! Text Perfectly Balanced (x=162, y=198) -->
+    <g
+       aria-label="MμN0!"
+       transform="matrix(0.18847452,-0.18569248,0.18569248,0.18847452,-34.749484,39.670008)"
+       id="text3553">
+      <text x="162" y="198" text-anchor="middle" dominant-baseline="central" class="puno-exact-text">MμN0!</text>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,348 @@
+// DUAL HYBRID SOUND ENGINE FOR MUNO WITH DISTINCT VICTORY FANFARE & MUNO SHOUT
+// Combines HTML5 Audio + Web SpeechSynthesis + Web Audio API synthesis
+
+class MunoSoundEngine {
+  constructor() {
+    this.ctx = null;
+    this.audioCache = {};
+    this.preloadSounds();
+  }
+
+  preloadSounds() {
+    if (typeof window === 'undefined') return;
+    const soundFiles = ['muno', 'play', 'draw', 'turn', 'stack', 'win'];
+    soundFiles.forEach(name => {
+      const audio = new Audio(`/sounds/${name}.wav?v=${Date.now()}`);
+      audio.preload = 'auto';
+      this.audioCache[name] = audio;
+    });
+  }
+
+  initContext() {
+    if (!this.ctx) {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx) {
+        this.ctx = new AudioCtx();
+      }
+    }
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
+  }
+
+  playAudioFile(name) {
+    try {
+      const cached = this.audioCache[name];
+      if (cached) {
+        const soundClone = cached.cloneNode();
+        soundClone.volume = 0.95;
+        const playPromise = soundClone.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(err => {
+            console.warn(`HTML5 Audio play catch (${name}):`, err);
+          });
+        }
+      } else {
+        const directAudio = new Audio(`/sounds/${name}.wav`);
+        directAudio.volume = 0.95;
+        directAudio.play().catch(e => console.warn('Direct play error:', e));
+      }
+    } catch (e) {
+      console.warn(`HTML5 Audio play err (${name}):`, e);
+    }
+  }
+
+  // 1. Play Card (Smooth Gentle Card Snap)
+  playCard() {
+    try {
+      this.initContext();
+      if (!this.ctx) return;
+
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(380, this.ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(110, this.ctx.currentTime + 0.07);
+
+      gain.gain.setValueAtTime(0.18, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.005, this.ctx.currentTime + 0.07);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc.start();
+      osc.stop(this.ctx.currentTime + 0.07);
+    } catch (e) {
+      console.warn('playCard err:', e);
+    }
+  }
+
+  // 2. Draw Card (Soft Paper Swoosh)
+  drawCard() {
+    try {
+      this.initContext();
+      if (!this.ctx) return;
+
+      const bufferSize = this.ctx.sampleRate * 0.08;
+      const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+      const output = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        output[i] = Math.random() * 2 - 1;
+      }
+
+      const whiteNoise = this.ctx.createBufferSource();
+      whiteNoise.buffer = buffer;
+
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(1200, this.ctx.currentTime);
+      filter.frequency.exponentialRampToValueAtTime(250, this.ctx.currentTime + 0.08);
+
+      const gain = this.ctx.createGain();
+      gain.gain.setValueAtTime(0.14, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.005, this.ctx.currentTime + 0.08);
+
+      whiteNoise.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      whiteNoise.start();
+      whiteNoise.stop(this.ctx.currentTime + 0.08);
+    } catch (e) {
+      console.warn('drawCard err:', e);
+    }
+  }
+
+  // 3. Your Turn (Soft Elegant Chime)
+  yourTurn() {
+    try {
+      this.initContext();
+      if (!this.ctx) return;
+
+      const notes = [523.25, 783.99];
+      notes.forEach((freq, idx) => {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, this.ctx.currentTime + idx * 0.09);
+
+        gain.gain.setValueAtTime(0.18, this.ctx.currentTime + idx * 0.09);
+        gain.gain.exponentialRampToValueAtTime(0.005, this.ctx.currentTime + idx * 0.09 + 0.16);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(this.ctx.currentTime + idx * 0.09);
+        osc.stop(this.ctx.currentTime + idx * 0.09 + 0.16);
+      });
+    } catch (e) {
+      console.warn('yourTurn err:', e);
+    }
+  }
+
+  // 4. Skip / Bloqueo
+  skip() {
+    try {
+      this.initContext();
+      if (!this.ctx) return;
+
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(240, this.ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(70, this.ctx.currentTime + 0.1);
+
+      gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.005, this.ctx.currentTime + 0.1);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc.start();
+      osc.stop(this.ctx.currentTime + 0.1);
+    } catch (e) {
+      console.warn('skip err:', e);
+    }
+  }
+
+  // 5. Reverse / Reversa
+  reverse() {
+    try {
+      this.initContext();
+      if (!this.ctx) return;
+
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(220, this.ctx.currentTime);
+      osc.frequency.linearRampToValueAtTime(550, this.ctx.currentTime + 0.08);
+      osc.frequency.linearRampToValueAtTime(300, this.ctx.currentTime + 0.16);
+
+      gain.gain.setValueAtTime(0.14, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.005, this.ctx.currentTime + 0.16);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc.start();
+      osc.stop(this.ctx.currentTime + 0.16);
+    } catch (e) {
+      console.warn('reverse err:', e);
+    }
+  }
+
+  // 6. Cumulative Draw Stack (+2, +4, +8, +12, +16...)
+  drawStack(stackCount = 2) {
+    try {
+      this.initContext();
+      if (!this.ctx) return;
+
+      const baseFreq = 350 + Math.min(stackCount * 85, 1200);
+      const mults = [1, 1.25, 1.5, 1.75];
+
+      mults.forEach((m, idx) => {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(baseFreq * m, this.ctx.currentTime + idx * 0.04);
+
+        gain.gain.setValueAtTime(0.22, this.ctx.currentTime + idx * 0.04);
+        gain.gain.exponentialRampToValueAtTime(0.005, this.ctx.currentTime + idx * 0.04 + 0.16);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(this.ctx.currentTime + idx * 0.04);
+        osc.stop(this.ctx.currentTime + idx * 0.04 + 0.16);
+      });
+    } catch (e) {
+      console.warn('drawStack err:', e);
+    }
+  }
+
+  // 7. "MIYUU-NÓ!" SHOUT
+  munoShout() {
+    this.playAudioFile('muno');
+    this.speakSpeechMuno();
+    try {
+      this.initContext();
+      if (this.ctx) {
+        const now = this.ctx.currentTime;
+        // "Mi-"
+        const osc1 = this.ctx.createOscillator();
+        const g1 = this.ctx.createGain();
+        osc1.type = 'triangle';
+        osc1.frequency.setValueAtTime(320, now);
+        osc1.frequency.linearRampToValueAtTime(520, now + 0.18);
+        g1.gain.setValueAtTime(0.35, now);
+        g1.gain.exponentialRampToValueAtTime(0.01, now + 0.18);
+        osc1.connect(g1); g1.connect(this.ctx.destination);
+        osc1.start(now); osc1.stop(now + 0.18);
+
+        // "-yuuu-NÓ!"
+        const osc2 = this.ctx.createOscillator();
+        const g2 = this.ctx.createGain();
+        osc2.type = 'sawtooth';
+        osc2.frequency.setValueAtTime(640, now + 0.2);
+        osc2.frequency.exponentialRampToValueAtTime(320, now + 0.5);
+        g2.gain.setValueAtTime(0.45, now + 0.2);
+        g2.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+        osc2.connect(g2); g2.connect(this.ctx.destination);
+        osc2.start(now + 0.2); osc2.stop(now + 0.5);
+      }
+    } catch (e) {
+      console.warn('munoShout synth error:', e);
+    }
+  }
+
+  speakSpeechMuno() {
+    try {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance("¡Miyuu-nó!");
+        utterance.pitch = 1.6;
+        utterance.rate = 0.9;
+        utterance.volume = 0.9;
+        utterance.lang = 'es-MX';
+
+        const voices = window.speechSynthesis.getVoices();
+        const esVoice = voices.find(v => v.lang.startsWith('es-MX') || v.lang.startsWith('es')) || voices[0];
+        if (esVoice) {
+          utterance.voice = esVoice;
+        }
+
+        window.speechSynthesis.speak(utterance);
+      }
+    } catch (e) {
+      console.warn('SpeechSynthesis err:', e);
+    }
+  }
+
+  // 8. TRIUMPHANT VICTORY FANFARE
+  winGame() {
+    this.playAudioFile('win');
+    this.speakVictory();
+    try {
+      this.initContext();
+      if (this.ctx) {
+        const notes = [523.25, 659.25, 783.99, 1046.50];
+        notes.forEach((freq, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime + idx * 0.12);
+          gain.gain.setValueAtTime(0.3, this.ctx.currentTime + idx * 0.12);
+          gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + idx * 0.12 + 0.4);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(this.ctx.currentTime + idx * 0.12);
+          osc.stop(this.ctx.currentTime + idx * 0.12 + 0.4);
+        });
+      }
+    } catch (e) {
+      console.warn('winGame synth error:', e);
+    }
+  }
+
+  speakVictory() {
+    try {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance("¡Victoria!");
+        utterance.pitch = 1.25;
+        utterance.rate = 1.0;
+        utterance.volume = 0.95;
+        utterance.lang = 'es-MX';
+
+        const voices = window.speechSynthesis.getVoices();
+        const esVoice = voices.find(v => v.lang.startsWith('es-MX') || v.lang.startsWith('es')) || voices[0];
+        if (esVoice) {
+          utterance.voice = esVoice;
+        }
+
+        window.speechSynthesis.speak(utterance);
+      }
+    } catch (e) {
+      console.warn('SpeechSynthesis win err:', e);
+    }
+  }
+
+  addPlayer() {
+    this.yourTurn();
+  }
+
+  removePlayer() {
+    this.yourTurn();
+  }
+
+  timeout() {
+    this.skip();
+  }
+}
+
+export const soundManager = new MunoSoundEngine();

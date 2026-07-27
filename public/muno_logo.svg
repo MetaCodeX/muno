@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 430 230" width="100%" height="100%">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@800;900&amp;family=Plus+Jakarta+Sans:wght@800;900&amp;display=swap');
+      .card-text-center {
+        font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+        font-weight: 900;
+        fill: #ffffff;
+        text-anchor: middle;
+        dominant-baseline: central;
+      }
+      .card-corner-text {
+        font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+        font-weight: 900;
+        fill: #ffffff;
+        text-anchor: middle;
+        dominant-baseline: central;
+      }
+      .card-shadow {
+        filter: drop-shadow(-4px 8px 14px rgba(0, 0, 0, 0.55));
+      }
+    </style>
+    <!-- Oval Slash Gradients -->
+    <linearGradient id="card-oval-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.92" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.75" />
+    </linearGradient>
+    <linearGradient id="mu-bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff3b5c" />
+      <stop offset="100%" stop-color="#b000ff" />
+    </linearGradient>
+  </defs>
+
+  <!-- 
+    CARD 1: "M" (GREEN) - POSITION: UP (x=12, y=20)
+  -->
+  <g class="card-shadow" transform="translate(12, 20) rotate(-6, 52, 77)">
+    <rect x="0" y="0" width="105" height="155" rx="16" ry="16" fill="#ffffff" stroke="#000000" stroke-width="1.4" />
+    <rect x="8" y="8" width="89" height="139" rx="9" ry="9" fill="#00e676" />
+    <ellipse cx="52" cy="77" rx="38" ry="53" fill="url(#card-oval-grad)" transform="rotate(-30, 52, 77)" />
+    <ellipse cx="52" cy="77" rx="31" ry="44" fill="#00e676" transform="rotate(-30, 52, 77)" />
+    <text x="52" y="78" font-size="52" class="card-text-center">M</text>
+    <text x="18" y="21" font-size="16" class="card-corner-text">M</text>
+    <text x="87" y="134" font-size="16" class="card-corner-text" transform="rotate(180, 87, 134)">M</text>
+  </g>
+
+  <!-- 
+    CARD 2: "μ" (CARD BACK) - POSITION: DOWN (x=84, y=55) - OVERLAPS CARD 1
+  -->
+  <g class="card-shadow" transform="translate(84, 55) rotate(4, 52, 77)">
+    <rect x="0" y="0" width="105" height="155" rx="16" ry="16" fill="#ffffff" stroke="#000000" stroke-width="1.4" />
+    <rect x="8" y="8" width="89" height="139" rx="9" ry="9" fill="#07090f" />
+    <ellipse cx="52" cy="77" rx="39" ry="55" fill="url(#mu-bg-grad)" transform="rotate(-35, 52, 77)" />
+    <text x="52" y="77" font-size="54" class="card-text-center" fill="#ffffff" transform="rotate(4, 52, 77)">μ</text>
+  </g>
+
+  <!-- 
+    CARD 3: "N" (YELLOW) - POSITION: UP (x=156, y=20) - OVERLAPS CARD 2
+  -->
+  <g class="card-shadow" transform="translate(156, 20) rotate(-3, 52, 77)">
+    <rect x="0" y="0" width="105" height="155" rx="16" ry="16" fill="#ffffff" stroke="#000000" stroke-width="1.4" />
+    <rect x="8" y="8" width="89" height="139" rx="9" ry="9" fill="#ffc107" />
+    <ellipse cx="52" cy="77" rx="38" ry="53" fill="url(#card-oval-grad)" transform="rotate(-30, 52, 77)" />
+    <ellipse cx="52" cy="77" rx="31" ry="44" fill="#ffc107" transform="rotate(-30, 52, 77)" />
+    <text x="52" y="78" font-size="52" class="card-text-center">N</text>
+    <text x="18" y="21" font-size="16" class="card-corner-text">N</text>
+    <text x="87" y="134" font-size="16" class="card-corner-text" transform="rotate(180, 87, 134)">N</text>
+  </g>
+
+  <!-- 
+    CARD 4: "0" (RED) - POSITION: DOWN (x=228, y=55) - OVERLAPS CARD 3
+  -->
+  <g class="card-shadow" transform="translate(228, 55) rotate(5, 52, 77)">
+    <rect x="0" y="0" width="105" height="155" rx="16" ry="16" fill="#ffffff" stroke="#000000" stroke-width="1.4" />
+    <rect x="8" y="8" width="89" height="139" rx="9" ry="9" fill="#ff3b5c" />
+    <ellipse cx="52" cy="77" rx="38" ry="53" fill="url(#card-oval-grad)" transform="rotate(-30, 52, 77)" />
+    <ellipse cx="52" cy="77" rx="31" ry="44" fill="#ff3b5c" transform="rotate(-30, 52, 77)" />
+    <text x="52" y="78" font-size="52" class="card-text-center">0</text>
+    <text x="18" y="21" font-size="16" class="card-corner-text">0</text>
+    <text x="87" y="134" font-size="16" class="card-corner-text" transform="rotate(180, 87, 134)">0</text>
+  </g>
+
+  <!-- 
+    CARD 5: "!" (BLUE) - POSITION: UP (x=300, y=20) - OVERLAPS CARD 4
+  -->
+  <g class="card-shadow" transform="translate(300, 20) rotate(-4, 52, 77)">
+    <rect x="0" y="0" width="105" height="155" rx="16" ry="16" fill="#ffffff" stroke="#000000" stroke-width="1.4" />
+    <rect x="8" y="8" width="89" height="139" rx="9" ry="9" fill="#0088ff" />
+    <ellipse cx="52" cy="77" rx="38" ry="53" fill="url(#card-oval-grad)" transform="rotate(-30, 52, 77)" />
+    <ellipse cx="52" cy="77" rx="31" ry="44" fill="#0088ff" transform="rotate(-30, 52, 77)" />
+    <text x="52" y="78" font-size="54" class="card-text-center">!</text>
+    <text x="18" y="21" font-size="16" class="card-corner-text">!</text>
+    <text x="87" y="134" font-size="16" class="card-corner-text" transform="rotate(180, 87, 134)">!</text>
+  </g>
+</svg>
