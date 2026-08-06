@@ -256,11 +256,18 @@ export default function App() {
     const unsubError = on('room:error', ({ message }) => {
       setError(message);
       setLoading(false);
-      clearSession();
-      setSessionId(null);
-      setRoomCode(null);
-      setGameState(null);
-      setScreen('home');
+      if (message && (message.includes('no existe') || message.includes('expulsado'))) {
+        clearSession();
+        setSessionId(null);
+        setRoomCode(null);
+        setGameState(null);
+        setScreen('home');
+      }
+    });
+
+    const unsubGameError = on('game:error', ({ message }) => {
+      setError(message);
+      setTimeout(() => setError(null), 3000);
     });
 
     const unsubKicked = on('room:kicked', ({ message }) => {
