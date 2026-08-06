@@ -118,7 +118,7 @@ function effectZeroRotate(gs, ctx) {
 // targetIdx must be provided in ctx
 function effectSevenSwap(gs, ctx) {
   const { myIdx, targetIdx, io, room } = ctx;
-  if (targetIdx === undefined || targetIdx === myIdx) {
+  if (targetIdx === undefined || targetIdx === null || targetIdx < 0 || targetIdx >= gs.hands.length || targetIdx === myIdx) {
     return { nextStep: 1, newDir: gs.direction, effectName: 'swap7', targetIdx: -1 };
   }
   const tmp = gs.hands[myIdx];
