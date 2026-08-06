@@ -365,6 +365,9 @@ export function MultiplayerGame({
 
   const canPlayCard = (card) => {
     if (!isMyTurn || !topCard) return false;
+    const activeColor = (currentColor || topCard?.color || '').toLowerCase();
+    const cardColor = (card.color || '').toLowerCase();
+
     if (drawStackCount > 0) {
       // Overkill: +6 and x2 are also defense cards
       const defenseCards = isOverkill
@@ -372,19 +375,20 @@ export function MultiplayerGame({
         : ['+2', '+4'];
       return defenseCards.includes(card.value);
     }
-    if (card.color === 'wild') return true;
-    if (card.color === currentColor) return true;
+    if (cardColor === 'wild') return true;
+    if (cardColor === activeColor) return true;
     if (card.value === topCard.value) return true;
     return false;
   };
 
   const canJumpInCard = (card) => {
     if (isMyTurn || !topCard || !isOverkill || !gameConfig?.jumpInEnabled) return false;
-    const activeColor = currentColor || topCard.color;
-    if (card.color === 'wild' && topCard.color === 'wild') {
+    const activeColor = (currentColor || topCard.color || '').toLowerCase();
+    const cardColor = (card.color || '').toLowerCase();
+    if (cardColor === 'wild' && topCard.color === 'wild') {
       return card.value === topCard.value;
     }
-    const isColorMatch = card.color === topCard.color || card.color === activeColor;
+    const isColorMatch = cardColor === topCard.color?.toLowerCase() || cardColor === activeColor;
     return isColorMatch && card.value === topCard.value;
   };
 
@@ -400,12 +404,6 @@ export function MultiplayerGame({
 
     if (!canPlayCard(card)) {
       setSelectedCardId(null);
-      return;
-    }
-
-    // On mobile: 1st tap pops out card to reveal full number & color, 2nd tap plays card!
-    if (isMobile && selectedCardId !== card.id) {
-      setSelectedCardId(card.id);
       return;
     }
 
