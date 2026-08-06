@@ -6,13 +6,14 @@ import os
 DB_PATH = os.path.join(os.path.dirname(__file__), 'muno_data.db')
 
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=10.0)
     conn.row_factory = sqlite3.Row
     return conn
 
 def init_db():
     conn = get_db()
     cursor = conn.cursor()
+    cursor.execute('PRAGMA journal_mode=WAL;')
     
     # Table: users
     cursor.execute('''
@@ -42,13 +43,7 @@ def init_db():
     conn.commit()
     conn.close()
 
-def get_or_create_user(user_key, username):
-    if not user_key:
-        return None
-    conn = get_db()
-    cursor = conn.cursor()
-    now = int(time.time() * 1000)
-
+def _get_or_create_user_with_cursor(cursor, user_key, username, now):
     cursor.execute('SELECT * FROM users WHERE user_key = ?', (user_key,))
     row = cursor.fetchone()
 
@@ -63,10 +58,20 @@ def get_or_create_user(user_key, username):
             VALUES (?, ?, 0, 0, '[]', ?, ?)
         ''', (user_key, username or 'Jugador MUNO', now, now))
 
+    cursor.execute('SELECT * FROM users WHERE user_key = ?', (user_key,))
+    return cursor.fetchone()
+
+def get_or_create_user(user_key, username):
+    if not user_key:
+        return None
+    conn = get_db()
+    cursor = conn.cursor()
+    now = int(time.time() * 1000)
+    
+    row = _get_or_create_user_with_cursor(cursor, user_key, username, now)
     conn.commit()
 
-    cursor.execute('SELECT * FROM users WHERE user_key = ?', (user_key,))
-    user = dict(cursor.fetchone())
+    user = dict(row)
     user['achievements'] = json.loads(user['achievements'] or '[]')
     conn.close()
     return user
@@ -86,12 +91,7 @@ def record_game_win(room_code, winner_key, winner_name, player_keys_names):
     for key, name in player_keys_names:
         if not key:
             continue
-        cursor.execute('SELECT * FROM users WHERE user_key = ?', (key,))
-        u = cursor.fetchone()
-        if not u:
-            get_or_create_user(key, name)
-            cursor.execute('SELECT * FROM users WHERE user_key = ?', (key,))
-            u = cursor.fetchone()
+        u = _get_or_create_user_with_cursor(cursor, key, name, now)
 
         gp = u['games_played'] + 1
         is_win = (key == winner_key)
@@ -156,5 +156,23 @@ def get_leaderboard(limit=50):
     return result
 
 if __name__ == '__main__':
+    import sys
     init_db()
-    print("MUNO Python SQLite Database Initialized Successfully!")
+    if len(sys.argv) > 1:
+        cmd = sys.argv[1]
+        if cmd == 'record_win':
+            payload = json.load(sys.stdin)
+            record_game_win(
+                payload['room_code'],
+                payload['winner_key'],
+                payload['winner_name'],
+                payload['player_keys_names']
+            )
+            print(json.dumps({"status": "ok"}))
+        elif cmd == 'get_leaderboard':
+            print(json.dumps(get_leaderboard()))
+        elif cmd == 'get_or_create_user':
+            payload = json.load(sys.stdin)
+            print(json.dumps(get_or_create_user(payload['user_key'], payload['username'])))
+    else:
+        print("MUNO Python SQLite Database Initialized Successfully!")

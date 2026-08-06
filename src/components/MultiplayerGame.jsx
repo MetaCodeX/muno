@@ -10,6 +10,14 @@ const COLOR_MAP = {
   wild: '#b000ff'
 };
 
+const SPANISH_COLOR_NAMES = {
+  red: 'ROJO',
+  blue: 'AZUL',
+  green: 'VERDE',
+  yellow: 'AMARILLO',
+  wild: 'COMODÍN',
+};
+
 // ── Turn Timer Hook ────────────────────────────────────────────────────────────
 function useTurnTimer(turnStartedAt, turnDuration, isMyTurn, onTimeout) {
   const [secondsLeft, setSecondsLeft] = useState(turnDuration);
@@ -56,8 +64,11 @@ export function MultiplayerGame({
   roomCode,
   lastGameAction,
   munoAnnounceEvent,
+  mode = 'classic',
+  gameConfig = null,
   onPlayCard,
   onDrawCard,
+  onJumpIn,
   onShoutMuno,
   onSelectColor,
   onRematch,
@@ -67,9 +78,14 @@ export function MultiplayerGame({
 }) {
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [pendingCard, setPendingCard] = useState(null);
+  const [showSwapPicker, setShowSwapPicker] = useState(false);
+  const [showZeroPicker, setShowZeroPicker] = useState(false);
   const [actionBurst, setActionBurst] = useState(null);
   const [flyingCards, setFlyingCards] = useState([]);
   const [pulsars, setPulsars] = useState([]);
+  const [okAnimClass, setOkAnimClass] = useState(null);
+
+  const isOverkill = mode === 'overkill';
   const actionBurstTimer = useRef(null);
   const prevTopCardId = useRef(null);
   const prevTurnIdx = useRef(null);
@@ -311,14 +327,15 @@ export function MultiplayerGame({
 
       if (card) {
         if (card.value === 'skip') {
-          triggerBurst('text', pColor, 'SKIP');
+          triggerBurst('text', pColor, 'BLOQUEO');
         } else if (card.value === 'reverse') {
           triggerBurst('text', pColor, '↺ REVERSA');
         } else if (card.value === '+2' || card.value === '+4') {
           triggerBurst('stack', pColor, `+${lastGameAction.drawStackCount || (card.value === '+4' ? 4 : 2)}`);
         } else if (lastGameAction.chosenColor) {
           const chosenHex = COLOR_MAP[lastGameAction.chosenColor] || pColor;
-          triggerBurst('text', chosenHex, `COLOR: ${lastGameAction.chosenColor.toUpperCase()}`);
+          const colorName = SPANISH_COLOR_NAMES[lastGameAction.chosenColor] || lastGameAction.chosenColor.toUpperCase();
+          triggerBurst('text', chosenHex, `COLOR: ${colorName}`);
         }
       }
     } else if (lastGameAction.type === 'cardDrawn') {
@@ -348,14 +365,39 @@ export function MultiplayerGame({
 
   const canPlayCard = (card) => {
     if (!isMyTurn || !topCard) return false;
-    if (drawStackCount > 0) return card.value === '+2' || card.value === '+4';
+    if (drawStackCount > 0) {
+      // Overkill: +6 and x2 are also defense cards
+      const defenseCards = isOverkill
+        ? ['+2', '+4', '+6', 'x2']
+        : ['+2', '+4'];
+      return defenseCards.includes(card.value);
+    }
     if (card.color === 'wild') return true;
     if (card.color === currentColor) return true;
     if (card.value === topCard.value) return true;
     return false;
   };
 
+  const canJumpInCard = (card) => {
+    if (isMyTurn || !topCard || !isOverkill || !gameConfig?.jumpInEnabled) return false;
+    const activeColor = currentColor || topCard.color;
+    if (card.color === 'wild' && topCard.color === 'wild') {
+      return card.value === topCard.value;
+    }
+    const isColorMatch = card.color === topCard.color || card.color === activeColor;
+    return isColorMatch && card.value === topCard.value;
+  };
+
   const handleCardClick = (card) => {
+    if (!isMyTurn) {
+      if (canJumpInCard(card)) {
+        onJumpIn(card.id);
+      } else {
+        setSelectedCardId(null);
+      }
+      return;
+    }
+
     if (!canPlayCard(card)) {
       setSelectedCardId(null);
       return;
@@ -368,6 +410,21 @@ export function MultiplayerGame({
     }
 
     setSelectedCardId(null);
+
+    // Overkill: card 0 triggers rotate modal
+    if (isOverkill && gameConfig?.zeroRotatesHands && card.value === '0' && card.color !== 'wild') {
+      setPendingCard(card);
+      setShowZeroPicker(true);
+      return;
+    }
+
+    // Overkill: card 7 triggers swap picker
+    if (isOverkill && gameConfig?.sevenSwapsHands && card.value === '7' && card.color !== 'wild') {
+      setPendingCard(card);
+      setShowSwapPicker(true);
+      return;
+    }
+
     if (card.color === 'wild') {
       setPendingCard(card);
       setShowColorPicker(true);
@@ -399,11 +456,17 @@ export function MultiplayerGame({
   };
 
   return (
-    <div style={{
-      width: '100vw', height: isMobile ? '100dvh' : '100vh', overflow: 'hidden', position: 'relative',
-      background: 'radial-gradient(ellipse at 50% 50%, #0e1628 0%, #07090f 100%)',
-      fontFamily: 'var(--font-body)',
-    }}>
+    <div
+      data-mode={mode}
+      style={{
+        width: '100vw', height: isMobile ? '100dvh' : '100vh', overflow: 'hidden', position: 'relative',
+        background: isOverkill
+          ? 'radial-gradient(ellipse at 50% 50%, #150a00 0%, #0a0600 100%)'
+          : 'radial-gradient(ellipse at 50% 50%, #0e1628 0%, #07090f 100%)',
+        fontFamily: 'var(--font-body)',
+        transition: 'background 0.5s ease',
+      }}
+    >
 
       {/* DYNAMIC BACKGROUND PULSARS */}
       {pulsars.map(p => (
@@ -475,7 +538,19 @@ export function MultiplayerGame({
         >
           <Trophy size={isMobile ? 9 : 12} />
         </button>
-        <span style={{ fontSize: isMobile ? '0.48rem' : '0.58rem', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-code)', marginLeft: '0.2rem' }}>v0.9.9.888</span>
+        <span style={{ fontSize: isMobile ? '0.48rem' : '0.58rem', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-code)', marginLeft: '0.2rem' }}>v0.9.9.8888-alpha</span>
+        {isOverkill && (
+          <span style={{
+            fontSize: isMobile ? '0.45rem' : '0.55rem', fontWeight: 900,
+            color: '#ff6030', background: 'rgba(255,69,0,0.15)',
+            border: '1px solid rgba(255,69,0,0.3)',
+            borderRadius: '4px', padding: '0.05rem 0.35rem',
+            letterSpacing: '0.08em', textTransform: 'uppercase',
+            marginLeft: '0.2rem',
+          }}>
+            OVERKILL
+          </span>
+        )}
       </div>
 
       {/* Leave button */}
@@ -718,7 +793,6 @@ export function MultiplayerGame({
           style={{ '--glow-color': drawStackCount > 0 ? '#ff3b5c' : myColor }}
         >
           {myHand.map(card => {
-            const playable = canPlayCard(card);
             const cardColor = COLOR_MAP[card.color] || '#fff';
             const isSelected = selectedCardId === card.id;
 
@@ -730,11 +804,12 @@ export function MultiplayerGame({
               ? (myHand.length > 12 ? '-26px' : myHand.length > 7 ? '-20px' : '-16px')
               : undefined;
 
+            const playable = isMyTurn ? canPlayCard(card) : canJumpInCard(card);
+            const isJumpIn = !isMyTurn && canJumpInCard(card);
+
             return (
               <div
                 key={card.id}
-                className="card-item"
-                onClick={() => handleCardClick(card)}
                 style={{
                   width: cardW,
                   marginLeft: isSelected && isMobile ? '8px' : marginLeft,
@@ -743,9 +818,17 @@ export function MultiplayerGame({
                   zIndex: isSelected ? 400 : undefined,
                   padding: isMobile ? '0.1rem' : '0.25rem',
                   opacity: playable ? 1 : 0.36,
-                  border: isSelected ? `2.5px solid ${cardColor}` : (playable ? `2px solid ${cardColor}90` : '1px solid rgba(255,255,255,0.09)'),
+                  border: isSelected
+                    ? `2.5px solid ${cardColor}`
+                    : (isJumpIn
+                        ? '2.5px solid #ffc107'
+                        : (playable ? `2px solid ${cardColor}90` : '1px solid rgba(255,255,255,0.09)')),
                   cursor: playable ? 'pointer' : 'not-allowed',
-                  boxShadow: isSelected ? `0 0 25px ${cardColor}, 0 12px 30px rgba(0,0,0,0.95)` : (playable ? `0 0 10px ${cardColor}45` : 'none'),
+                  boxShadow: isSelected
+                    ? `0 0 25px ${cardColor}, 0 12px 30px rgba(0,0,0,0.95)`
+                    : (isJumpIn
+                        ? '0 0 18px #ffc107, 0 0 30px rgba(255,69,0,0.6)'
+                        : (playable ? `0 0 10px ${cardColor}45` : 'none')),
                   transition: 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
                   borderRadius: '6px',
                 }}
@@ -757,12 +840,12 @@ export function MultiplayerGame({
         </div>
       </div>
 
-      {/* ═══ WILD COLOR PICKER ══════════════════════════════════════════════════ */}
+      {/* ═══ WILD COLOR PICKER ════════════════════════════════════════════════ */}
       {showColorPicker && (
         <div className="modal-overlay">
           <div className="modal-content" style={{ maxWidth: '320px', textAlign: 'center', borderRadius: '22px', padding: '1.5rem', background: 'rgba(10,13,24,0.97)' }}>
             <div style={{ fontSize: '0.95rem', fontWeight: 800, marginBottom: '1rem', color: '#fff' }}>Elige un color</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem', marginBottom: '1rem' }}>
               {[
                 { key: 'red', label: 'Rojo', hex: '#ff3b5c' },
                 { key: 'blue', label: 'Azul', hex: '#0088ff' },
@@ -784,6 +867,48 @@ export function MultiplayerGame({
                 </button>
               ))}
             </div>
+            <button onClick={() => { setPendingCard(null); setShowColorPicker(false); }} style={{
+              background: 'none', border: 'none',
+              color: 'rgba(255,255,255,0.3)', fontSize: '0.78rem', fontWeight: 600,
+              cursor: 'pointer', fontFamily: 'var(--font-body)', padding: '0.3rem 0.6rem',
+            }}>
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ OVERKILL: CARD 0 ROTATE PICKER ═══════════════════════════════════ */}
+      {showZeroPicker && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '300px', textAlign: 'center', borderRadius: '22px', padding: '1.5rem', background: 'rgba(10,6,0,0.97)', border: '1px solid rgba(255,69,0,0.15)' }}>
+            <div style={{ fontSize: '0.95rem', fontWeight: 800, marginBottom: '0.3rem', color: '#fff' }}>Carta 0</div>
+            <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.35)', marginBottom: '1rem', fontWeight: 500 }}>Rotación de manos en Overkill</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+              <button onClick={() => { onPlayCard(pendingCard.id, null); setPendingCard(null); setShowZeroPicker(false); }} style={{ padding: '0.6rem', background: 'rgba(255,69,0,0.15)', border: '1px solid rgba(255,69,0,0.35)', borderRadius: '10px', color: '#ff6030', fontSize: '0.82rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'var(--font-body)' }}>Rotar todas las manos</button>
+              <button onClick={() => { onPlayCard(pendingCard.id, null, -1); setPendingCard(null); setShowZeroPicker(false); }} style={{ padding: '0.55rem', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '10px', color: 'rgba(255,255,255,0.85)', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-body)' }}>Lanzar sin efecto</button>
+              <button onClick={() => { setPendingCard(null); setShowZeroPicker(false); }} style={{ marginTop: '0.1rem', background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-body)', padding: '0.2rem' }}>Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ OVERKILL: SWAP TARGET PICKER (carta 7) ══════════════════════════ */}
+      {showSwapPicker && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '300px', textAlign: 'center', borderRadius: '22px', padding: '1.5rem', background: 'rgba(10,6,0,0.97)', border: '1px solid rgba(255,69,0,0.15)' }}>
+            <div style={{ fontSize: '0.95rem', fontWeight: 800, marginBottom: '0.3rem', color: '#fff' }}>Carta 7</div>
+            <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.35)', marginBottom: '1rem', fontWeight: 500 }}>Intercambiar mano con un jugador</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+              {gamePlayers.filter((_, i) => i !== myIdx).map(p => (
+                <button key={p.sessionId} onClick={() => { onPlayCard(pendingCard.id, null, p.playerIdx); setPendingCard(null); setShowSwapPicker(false); }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.55rem 0.8rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '10px', color: '#fff', fontWeight: 700, fontSize: '0.84rem', cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><span style={{ width: '9px', height: '9px', borderRadius: '50%', background: p.color, boxShadow: `0 0 6px ${p.color}`, flexShrink: 0 }} />{p.username}</div>
+                  <span style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-code)' }}>{gameState.handSizes?.[p.playerIdx] ?? '?'} cartas</span>
+                </button>
+              ))}
+              <button onClick={() => { onPlayCard(pendingCard.id, null, -1); setPendingCard(null); setShowSwapPicker(false); }} style={{ padding: '0.55rem', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '10px', color: 'rgba(255,255,255,0.85)', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-body)' }}>Lanzar sin efecto</button>
+              <button onClick={() => { setPendingCard(null); setShowSwapPicker(false); }} style={{ marginTop: '0.2rem', background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-body)', padding: '0.2rem' }}>Cancelar</button>
+            </div>
           </div>
         </div>
       )}
@@ -794,26 +919,13 @@ export function MultiplayerGame({
           <div className="modal-content" style={{ maxWidth: '360px', textAlign: 'center', borderRadius: '22px', padding: '2rem', background: 'rgba(10,13,24,0.97)' }}>
             <div style={{ fontSize: '2.8rem', marginBottom: '0.4rem' }}>🏆</div>
             <div style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.14em', color: 'rgba(255,255,255,0.28)', marginBottom: '0.35rem' }}>Ganador</div>
-            <div style={{ fontSize: '1.55rem', fontWeight: 900, color: gamePlayers[winner]?.color || '#ffc107', marginBottom: '0.25rem' }}>
-              {gamePlayers[winner]?.username || '???'}
-            </div>
-            <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.28)', marginBottom: '1.3rem' }}>
-              {gamePlayers.length} jugadores · Sala {roomCode}
-            </div>
+            <div style={{ fontSize: '1.55rem', fontWeight: 900, color: gamePlayers[winner]?.color || '#ffc107', marginBottom: '0.25rem' }}>{gamePlayers[winner]?.username || '???'}</div>
+            <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.28)', marginBottom: '1.3rem' }}>{gamePlayers.length} jugadores · Sala {roomCode}</div>
             <div style={{ display: 'flex', gap: '0.65rem' }}>
               {isAdmin && (
-                <button onClick={onRematch} style={{
-                  flex: 1, padding: '0.68rem', borderRadius: '12px', border: 'none',
-                  background: 'linear-gradient(135deg, #0088ff, #00e676)',
-                  color: '#07090f', fontWeight: 900, fontSize: '0.88rem', cursor: 'pointer',
-                }}>Nueva partida</button>
+                <button onClick={onRematch} style={{ flex: 1, padding: '0.68rem', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg, #0088ff, #00e676)', color: '#07090f', fontWeight: 900, fontSize: '0.88rem', cursor: 'pointer' }}>Nueva partida</button>
               )}
-              <button onClick={onLeave} style={{
-                flex: 1, padding: '0.68rem', borderRadius: '12px',
-                border: '1px solid rgba(255,59,92,0.28)',
-                background: 'rgba(255,59,92,0.07)',
-                color: '#ff6b82', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer',
-              }}>Salir</button>
+              <button onClick={onLeave} style={{ flex: 1, padding: '0.68rem', borderRadius: '12px', border: '1px solid rgba(255,59,92,0.28)', background: 'rgba(255,59,92,0.07)', color: '#ff6b82', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer' }}>Salir</button>
             </div>
           </div>
         </div>

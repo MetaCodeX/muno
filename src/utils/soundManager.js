@@ -332,16 +332,193 @@ class MunoSoundEngine {
     }
   }
 
-  addPlayer() {
-    this.yourTurn();
+  addPlayer() { this.yourTurn(); }
+  removePlayer() { this.yourTurn(); }
+  timeout() { this.skip(); }
+
+  // ── Overkill SFX ─────────────────────────────────────────────────────────
+
+  // Activar modo Overkill en lobby — tono ascendente
+  overkillActivate() {
+    try {
+      this.initContext();
+      if (!this.ctx) return;
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(180, now);
+      osc.frequency.exponentialRampToValueAtTime(720, now + 0.38);
+      gain.gain.setValueAtTime(0.16, now);
+      gain.gain.exponentialRampToValueAtTime(0.005, now + 0.38);
+      osc.connect(gain); gain.connect(this.ctx.destination);
+      osc.start(now); osc.stop(now + 0.38);
+    } catch(e) { console.warn('overkillActivate err:', e); }
   }
 
-  removePlayer() {
-    this.yourTurn();
+  // +6 — draw stack pesado con capa grave
+  overkillPlus6() {
+    try {
+      this.initContext();
+      if (!this.ctx) return;
+      const now = this.ctx.currentTime;
+      [[480, 0], [280, 0.04], [520, 0.08], [240, 0.12]].forEach(([freq, t]) => {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = t % 2 === 0 ? 'sawtooth' : 'triangle';
+        osc.frequency.setValueAtTime(freq, now + t);
+        gain.gain.setValueAtTime(0.2, now + t);
+        gain.gain.exponentialRampToValueAtTime(0.005, now + t + 0.18);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(now + t); osc.stop(now + t + 0.18);
+      });
+    } catch(e) { console.warn('overkillPlus6 err:', e); }
   }
 
-  timeout() {
-    this.skip();
+  // x2 — pitch-shift descendente distorsionado
+  overkillX2() {
+    try {
+      this.initContext();
+      if (!this.ctx) return;
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(520, now);
+      osc.frequency.exponentialRampToValueAtTime(180, now + 0.28);
+      gain.gain.setValueAtTime(0.22, now);
+      gain.gain.exponentialRampToValueAtTime(0.005, now + 0.28);
+      osc.connect(gain); gain.connect(this.ctx.destination);
+      osc.start(now); osc.stop(now + 0.28);
+
+      // segunda capa desfasada
+      const osc2 = this.ctx.createOscillator();
+      const gain2 = this.ctx.createGain();
+      osc2.type = 'square';
+      osc2.frequency.setValueAtTime(260, now + 0.06);
+      osc2.frequency.exponentialRampToValueAtTime(90, now + 0.28);
+      gain2.gain.setValueAtTime(0.1, now + 0.06);
+      gain2.gain.exponentialRampToValueAtTime(0.005, now + 0.28);
+      osc2.connect(gain2); gain2.connect(this.ctx.destination);
+      osc2.start(now + 0.06); osc2.stop(now + 0.28);
+    } catch(e) { console.warn('overkillX2 err:', e); }
+  }
+
+  // Flush — swoosh de cartas volando
+  overkillFlush() {
+    try {
+      this.initContext();
+      if (!this.ctx) return;
+      const sr = this.ctx.sampleRate;
+      const dur = 0.48;
+      const buf = this.ctx.createBuffer(1, sr * dur, sr);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+      const noise = this.ctx.createBufferSource();
+      noise.buffer = buf;
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(900, this.ctx.currentTime);
+      filter.frequency.exponentialRampToValueAtTime(200, this.ctx.currentTime + dur);
+      filter.Q.value = 0.8;
+      const gain = this.ctx.createGain();
+      gain.gain.setValueAtTime(0.18, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.005, this.ctx.currentTime + dur);
+      noise.connect(filter); filter.connect(gain); gain.connect(this.ctx.destination);
+      noise.start(); noise.stop(this.ctx.currentTime + dur);
+    } catch(e) { console.warn('overkillFlush err:', e); }
+  }
+
+  // Dado — rattle corto + impacto seco
+  overkillDice() {
+    try {
+      this.initContext();
+      if (!this.ctx) return;
+      const now = this.ctx.currentTime;
+      // rattle: noise burst
+      const sr = this.ctx.sampleRate;
+      const rattleDur = 0.28;
+      const buf = this.ctx.createBuffer(1, sr * rattleDur, sr);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < data.length; i++) {
+        data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+      }
+      const noise = this.ctx.createBufferSource();
+      noise.buffer = buf;
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'highpass';
+      filter.frequency.value = 1800;
+      const gNoise = this.ctx.createGain();
+      gNoise.gain.setValueAtTime(0.14, now);
+      gNoise.gain.exponentialRampToValueAtTime(0.005, now + rattleDur);
+      noise.connect(filter); filter.connect(gNoise); gNoise.connect(this.ctx.destination);
+      noise.start(now); noise.stop(now + rattleDur);
+      // impacto seco
+      const osc = this.ctx.createOscillator();
+      const gImpact = this.ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(90, now + rattleDur);
+      gImpact.gain.setValueAtTime(0.3, now + rattleDur);
+      gImpact.gain.exponentialRampToValueAtTime(0.005, now + rattleDur + 0.09);
+      osc.connect(gImpact); gImpact.connect(this.ctx.destination);
+      osc.start(now + rattleDur); osc.stop(now + rattleDur + 0.09);
+    } catch(e) { console.warn('overkillDice err:', e); }
+  }
+
+  // Rotación de manos (carta 0) — whoosh circular
+  overkillRotate() {
+    try {
+      this.initContext();
+      if (!this.ctx) return;
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(280, now);
+      osc.frequency.linearRampToValueAtTime(580, now + 0.2);
+      osc.frequency.linearRampToValueAtTime(280, now + 0.4);
+      gain.gain.setValueAtTime(0.17, now);
+      gain.gain.setValueAtTime(0.17, now + 0.2);
+      gain.gain.exponentialRampToValueAtTime(0.005, now + 0.4);
+      osc.connect(gain); gain.connect(this.ctx.destination);
+      osc.start(now); osc.stop(now + 0.4);
+    } catch(e) { console.warn('overkillRotate err:', e); }
+  }
+
+  // Swap de manos (carta 7) — dos clicks sucesivos
+  overkillSwap() {
+    try {
+      this.initContext();
+      if (!this.ctx) return;
+      const now = this.ctx.currentTime;
+      [[440, 0], [550, 0.16]].forEach(([freq, t]) => {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, now + t);
+        gain.gain.setValueAtTime(0.19, now + t);
+        gain.gain.exponentialRampToValueAtTime(0.005, now + t + 0.09);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(now + t); osc.stop(now + t + 0.09);
+      });
+    } catch(e) { console.warn('overkillSwap err:', e); }
+  }
+
+  // Jump-In — mismo snap pero pitch más alto
+  overkillJumpIn() {
+    try {
+      this.initContext();
+      if (!this.ctx) return;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(456, this.ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(132, this.ctx.currentTime + 0.07);
+      gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.005, this.ctx.currentTime + 0.07);
+      osc.connect(gain); gain.connect(this.ctx.destination);
+      osc.start(); osc.stop(this.ctx.currentTime + 0.07);
+    } catch(e) { console.warn('overkillJumpIn err:', e); }
   }
 }
 

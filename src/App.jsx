@@ -30,6 +30,7 @@ export default function App() {
 
   // Session
   const [sessionId, setSessionId] = useState(null);
+  const sessionIdRef = useRef(null); // always-fresh ref for callbacks
   const [roomCode, setRoomCode] = useState(null);
   const [myColor, setMyColor] = useState('#00e676');
   const [isAdmin, setIsAdmin] = useState(false);
@@ -37,6 +38,8 @@ export default function App() {
   // Lobby state
   const [lobbyPlayers, setLobbyPlayers] = useState([]);
   const [linkOpen, setLinkOpen] = useState(true);
+  const [roomMode, setRoomMode] = useState('classic');
+  const [roomConfig, setRoomConfig] = useState(null);
 
   // Game state (from server)
   const [gameState, setGameState] = useState(null);
@@ -89,8 +92,11 @@ export default function App() {
 
     if (inviteCode) {
       clearUrlParam();
-      // Invite code in URL overrides old session if it's for a different room!
-      if (session && session.roomCode && session.roomCode.toUpperCase() !== inviteCode.toUpperCase()) {
+
+      // If the saved session is for a DIFFERENT room, clear it so we don't
+      // send a stale sessionId that would hijack the old slot.
+      const sameRoom = session?.roomCode?.toUpperCase() === inviteCode.toUpperCase();
+      if (session && !sameRoom) {
         clearSession();
       }
 
@@ -98,7 +104,14 @@ export default function App() {
         // User already has a saved name -> auto-join the invited room immediately!
         setLoading(true);
         setTimeout(() => {
-          emit('room:join', { roomCode: inviteCode, username });
+          emit('room:join', {
+            roomCode: inviteCode,
+            username,
+            // Only send sessionId if it's for THIS same room (reconnect case)
+            sessionId: sameRoom ? session?.sessionId : null,
+            deviceId: getOrCreateDeviceId(),
+            userKey: getOrCreateUserKey(),
+          });
         }, 500);
       } else {
         setUrlInviteCode(inviteCode);
@@ -136,11 +149,14 @@ export default function App() {
 
     const unsubRoomCreated = on('room:created', ({ sessionId: sid, roomCode: code, color, lobbyState }) => {
       setSessionId(sid);
+      sessionIdRef.current = sid;
       setRoomCode(code);
       setMyColor(color);
       setIsAdmin(true);
       setLobbyPlayers(lobbyState.players);
       setLinkOpen(lobbyState.linkOpen);
+      if (lobbyState.mode)   setRoomMode(lobbyState.mode);
+      if (lobbyState.config) setRoomConfig(lobbyState.config);
       saveSession({ sessionId: sid, roomCode: code });
       setLoading(false);
       setError(null);
@@ -149,11 +165,14 @@ export default function App() {
 
     const unsubRoomJoined = on('room:joined', ({ sessionId: sid, roomCode: code, color, isAdmin: admin, lobbyState }) => {
       setSessionId(sid);
+      sessionIdRef.current = sid;
       setRoomCode(code);
       setMyColor(color);
       setIsAdmin(admin);
       setLobbyPlayers(lobbyState.players);
       setLinkOpen(lobbyState.linkOpen);
+      if (lobbyState.mode)   setRoomMode(lobbyState.mode);
+      if (lobbyState.config) setRoomConfig(lobbyState.config);
       saveSession({ sessionId: sid, roomCode: code });
       setLoading(false);
       setError(null);
@@ -163,6 +182,8 @@ export default function App() {
     const unsubLobbyUpdate = on('lobby:update', (lobbyState) => {
       setLobbyPlayers(lobbyState.players);
       setLinkOpen(lobbyState.linkOpen);
+      if (lobbyState.mode)   setRoomMode(lobbyState.mode);
+      if (lobbyState.config) setRoomConfig(lobbyState.config);
     });
 
     const unsubGameStarted = on('game:started', ({ players }) => {
@@ -195,7 +216,7 @@ export default function App() {
       setLastGameAction({ type: 'cardDrawn', playerIdx, count: count || 1, key: Date.now() });
     });
 
-    const unsubCardPlayed = on('game:cardPlayed', ({ playerIdx, card, chosenColor, drawStackCount }) => {
+    const unsubCardPlayed = on('game:cardPlayed', ({ playerIdx, card, chosenColor, drawStackCount, cardEffect }) => {
       if (!card) return;
       if (card.value === 'skip') {
         soundManager.skip();
@@ -203,12 +224,24 @@ export default function App() {
         soundManager.reverse();
       } else if (card.value === '+2' || card.value === '+4') {
         soundManager.drawStack(drawStackCount || (card.value === '+4' ? 4 : 2));
+      } else if (card.value === '+6') {
+        soundManager.overkillPlus6();
+      } else if (card.value === 'x2') {
+        soundManager.overkillX2();
+      } else if (card.value === 'flush') {
+        soundManager.overkillFlush();
+      } else if (card.value === 'dice') {
+        soundManager.overkillDice();
+      } else if (card.value === '0' && cardEffect === 'rotate0') {
+        soundManager.overkillRotate();
+      } else if (card.value === '7' && cardEffect === 'swap7') {
+        soundManager.overkillSwap();
       } else if (card.color === 'wild' || chosenColor) {
         soundManager.drawStack(4);
       } else {
         soundManager.playCard();
       }
-      setLastGameAction({ type: 'cardPlayed', playerIdx, card, chosenColor, drawStackCount, key: Date.now() });
+      setLastGameAction({ type: 'cardPlayed', playerIdx, card, chosenColor, drawStackCount, cardEffect, key: Date.now() });
     });
 
     const unsubGameWinner = on('game:winner', ({ playerIdx, username, color }) => {
@@ -294,21 +327,22 @@ export default function App() {
   }, [emit, userKey]);
 
   const handleToggleLink = useCallback(() => {
-    emit('room:toggleLink', { sessionId });
-  }, [emit, sessionId]);
+    emit('room:toggleLink', { sessionId: sessionIdRef.current });
+  }, [emit]);
 
   const handleKick = useCallback((targetSessionId) => {
-    emit('room:kick', { sessionId, targetSessionId });
-  }, [emit, sessionId]);
+    emit('room:kick', { sessionId: sessionIdRef.current, targetSessionId });
+  }, [emit]);
 
   const handleStart = useCallback(() => {
-    emit('game:start', { sessionId });
-  }, [emit, sessionId]);
+    emit('game:start', { sessionId: sessionIdRef.current });
+  }, [emit]);
 
   const handleLeave = useCallback(() => {
     clearSession();
     setScreen('home');
     setSessionId(null);
+    sessionIdRef.current = null;
     setRoomCode(null);
     setGameState(null);
     socket.disconnect();
@@ -317,40 +351,51 @@ export default function App() {
 
   const handleRename = useCallback((newName) => {
     saveUsername(newName);
-    emit('player:setUsername', { sessionId, username: newName });
-  }, [emit, sessionId]);
+    emit('player:setUsername', { sessionId: sessionIdRef.current, username: newName });
+  }, [emit]);
 
   const handleChatSend = useCallback((text) => {
-    emit('chat:send', { sessionId, text });
-  }, [emit, sessionId]);
+    emit('chat:send', { sessionId: sessionIdRef.current, text });
+  }, [emit]);
 
-  const handlePlayCard = useCallback((cardId, chosenColor) => {
-    emit('game:playCard', { sessionId, cardId, chosenColor });
-  }, [emit, sessionId]);
+  const handlePlayCard = useCallback((cardId, chosenColor, targetIdx) => {
+    emit('game:playCard', { sessionId: sessionIdRef.current, cardId, chosenColor, targetIdx });
+  }, [emit]);
+
+  const handleJumpIn = useCallback((cardId) => {
+    emit('game:jumpIn', { sessionId: sessionIdRef.current, cardId });
+  }, [emit]);
+
+  const handleSetMode = useCallback((mode, overrides) => {
+    setRoomMode(mode);
+    const sid = sessionIdRef.current;
+    emit('room:setMode', { sessionId: sid, mode, overrides });
+    if (mode === 'overkill') soundManager.overkillActivate();
+  }, [emit]);
 
   const handleDrawCard = useCallback(() => {
-    emit('game:drawCard', { sessionId });
-  }, [emit, sessionId]);
+    emit('game:drawCard', { sessionId: sessionIdRef.current });
+  }, [emit]);
 
   const handleShoutMuno = useCallback(() => {
-    emit('game:shoutMuno', { sessionId });
-  }, [emit, sessionId]);
+    emit('game:shoutMuno', { sessionId: sessionIdRef.current });
+  }, [emit]);
 
   const handleSelectColor = useCallback((color) => {
-    emit('game:selectColor', { sessionId, color });
-  }, [emit, sessionId]);
+    emit('game:selectColor', { sessionId: sessionIdRef.current, color });
+  }, [emit]);
 
   const handleRematch = useCallback(() => {
-    emit('game:rematch', { sessionId });
-  }, [emit, sessionId]);
+    emit('game:rematch', { sessionId: sessionIdRef.current });
+  }, [emit]);
 
   const handlePassTurn = useCallback(() => {
-    emit('game:passTurn', { sessionId });
-  }, [emit, sessionId]);
+    emit('game:passTurn', { sessionId: sessionIdRef.current });
+  }, [emit]);
 
   const handleTimeout = useCallback(() => {
-    emit('game:timeout', { sessionId });
-  }, [emit, sessionId]);
+    emit('game:timeout', { sessionId: sessionIdRef.current });
+  }, [emit]);
 
   // Auto-join from pending invite code
   useEffect(() => {
@@ -388,6 +433,9 @@ export default function App() {
           isAdmin={isAdmin}
           linkOpen={linkOpen}
           connected={connected}
+          mode={roomMode}
+          config={roomConfig}
+          onSetMode={handleSetMode}
           onToggleLink={handleToggleLink}
           onKick={handleKick}
           onStart={handleStart}
@@ -407,8 +455,11 @@ export default function App() {
             roomCode={roomCode}
             lastGameAction={lastGameAction}
             munoAnnounceEvent={munoAnnounceEvent}
+            mode={gameState?.mode || 'classic'}
+            gameConfig={gameState?.config || null}
             onPlayCard={handlePlayCard}
             onDrawCard={handleDrawCard}
+            onJumpIn={handleJumpIn}
             onShoutMuno={handleShoutMuno}
             onSelectColor={handleSelectColor}
             onRematch={handleRematch}

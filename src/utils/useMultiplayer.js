@@ -22,7 +22,7 @@ function getSocket() {
 export function useMultiplayerSocket() {
   const socket = useRef(getSocket());
   const [connected, setConnected] = useState(false);
-  const listeners = useRef({});
+
 
   useEffect(() => {
     const s = socket.current;
@@ -61,21 +61,25 @@ export function useMultiplayerSocket() {
   const on = useCallback((event, handler) => {
     const s = socket.current;
     s.on(event, handler);
-    listeners.current[event] = handler;
+    // BUG 4 FIX: Return a closure that captures the exact handler reference.
+    // The old approach stored listeners.current[event] = handler, which was a dict
+    // with only ONE entry per event. If two effects called on('same-event', fn),
+    // the second would overwrite listeners.current['same-event'], and the first
+    // effect's cleanup would call off('same-event') removing the WRONG handler.
+    // Now each caller gets their own specific unsubscribe function.
     return () => s.off(event, handler);
   }, []);
 
   const off = useCallback((event) => {
-    const s = socket.current;
-    if (listeners.current[event]) {
-      s.off(event, listeners.current[event]);
-      delete listeners.current[event];
-    }
+    // Legacy helper — prefer using the return value of on() for cleanup.
+    // This removes ALL listeners for the event as a last-resort flush.
+    socket.current.removeAllListeners(event);
   }, []);
 
   const emit = useCallback((event, data) => {
     socket.current.emit(event, data);
   }, []);
+
 
   return { socket: socket.current, connected, on, off, emit };
 }

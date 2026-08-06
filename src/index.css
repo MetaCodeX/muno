@@ -17,6 +17,27 @@
   --font-heading: 'Outfit', -apple-system, sans-serif;
   --font-body: 'Plus Jakarta Sans', -apple-system, sans-serif;
   --font-code: 'Fira Code', monospace;
+
+  /* ── Theme tokens (Classic defaults) ── */
+  --theme-accent:   #c840e9;
+  --theme-accent2:  #0088ff;
+  --theme-positive: #00e676;
+  --theme-bg:       #07090f;
+  --theme-panel:    rgba(10,13,24,0.9);
+  --theme-glow:     rgba(200,64,233,0.3);
+  --theme-border:   rgba(200,64,233,0.2);
+}
+
+/* ── Overkill palette — only colors change, nothing else ── */
+[data-mode="overkill"] {
+  --theme-accent:   #ff4500;
+  --theme-accent2:  #ff8800;
+  --theme-positive: #ffcc00;
+  --theme-bg:       #0a0600;
+  --theme-panel:    rgba(18,10,4,0.9);
+  --theme-glow:     rgba(255,69,0,0.35);
+  --theme-border:   rgba(255,69,0,0.2);
+  --bg-main:        #0a0600;
 }
 
 @keyframes pulseMunoButton {
@@ -27,6 +48,62 @@
 
 .muno-button-pulsing {
   animation: pulseMunoButton 0.95s infinite ease-in-out !important;
+}
+
+/* ── Overkill animations ── */
+@keyframes okRotateSeats {
+  0%   { transform: rotate(0deg) scale(1); }
+  50%  { transform: rotate(180deg) scale(1.04); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+.ok-rotate-seats {
+  animation: okRotateSeats 0.6s ease-in-out;
+}
+
+@keyframes okCardFlush {
+  0%   { transform: translateY(0);     opacity: 1; }
+  100% { transform: translateY(-28px); opacity: 0; }
+}
+.ok-card-flush {
+  animation: okCardFlush 0.3s ease-in forwards;
+}
+
+@keyframes okShake {
+  0%,100% { transform: translateX(0); }
+  20%     { transform: translateX(-5px); }
+  40%     { transform: translateX(5px); }
+  60%     { transform: translateX(-3px); }
+  80%     { transform: translateX(3px); }
+}
+.ok-shake {
+  animation: okShake 0.35s ease-in-out;
+}
+
+@keyframes okJumpInPulse {
+  0%,100% { box-shadow: 0 0 8px var(--theme-positive, #ffcc00); }
+  50%     { box-shadow: 0 0 18px var(--theme-positive, #ffcc00), 0 0 30px var(--theme-positive, #ffcc00); }
+}
+.ok-jumpin-glow {
+  animation: okJumpInPulse 0.8s ease-in-out infinite;
+}
+
+/* ── Advanced config panel scrollbar ── */
+.adv-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.12) transparent;
+}
+.adv-scroll::-webkit-scrollbar {
+  width: 3px;
+}
+.adv-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.adv-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.12);
+  border-radius: 99px;
+}
+.adv-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.22);
 }
 
 html, body, #root {
