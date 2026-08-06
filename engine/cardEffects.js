@@ -100,16 +100,27 @@ function effectZeroRotate(gs, ctx) {
   const n = gs.hands.length;
   if (n < 2) return { nextStep: 1, newDir: gs.direction, effectName: 'rotate0' };
 
+  if (!gs.munoShoutedBy) gs.munoShoutedBy = {};
   if (gs.direction === 1) {
     // Clockwise: last player gets first player's hand, everyone shifts right
     const saved = gs.hands[n - 1];
-    for (let i = n - 1; i > 0; i--) gs.hands[i] = gs.hands[i - 1];
+    const savedMuno = gs.munoShoutedBy[n - 1];
+    for (let i = n - 1; i > 0; i--) {
+      gs.hands[i] = gs.hands[i - 1];
+      gs.munoShoutedBy[i] = gs.munoShoutedBy[i - 1];
+    }
     gs.hands[0] = saved;
+    gs.munoShoutedBy[0] = savedMuno;
   } else {
     // Counter-clockwise
     const saved = gs.hands[0];
-    for (let i = 0; i < n - 1; i++) gs.hands[i] = gs.hands[i + 1];
+    const savedMuno = gs.munoShoutedBy[0];
+    for (let i = 0; i < n - 1; i++) {
+      gs.hands[i] = gs.hands[i + 1];
+      gs.munoShoutedBy[i] = gs.munoShoutedBy[i + 1];
+    }
     gs.hands[n - 1] = saved;
+    gs.munoShoutedBy[n - 1] = savedMuno;
   }
   gs.drawStackCount = 0;
   if (io && room) {
@@ -132,6 +143,12 @@ function effectSevenSwap(gs, ctx) {
   const tmp = gs.hands[myIdx];
   gs.hands[myIdx] = gs.hands[targetIdx] || [];
   gs.hands[targetIdx] = tmp;
+
+  if (!gs.munoShoutedBy) gs.munoShoutedBy = {};
+  const tmpMuno = gs.munoShoutedBy[myIdx];
+  gs.munoShoutedBy[myIdx] = gs.munoShoutedBy[targetIdx];
+  gs.munoShoutedBy[targetIdx] = tmpMuno;
+
   gs.drawStackCount = 0;
   if (io && room) {
     const myName = room.players[myIdx]?.username || '?';

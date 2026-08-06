@@ -537,7 +537,13 @@ io.on('connection', (socket) => {
 
     // ── MUNO rule ─────────────────────────────────────────────────────────────
     const remainingCards = gs.hands[myIdx].length;
-    const munoResult = checkMunoRule(remainingCards, !!gs.munoShoutedBy[myIdx], config);
+    const isSwapOrRotate = effectName === 'swap7' || effectName === 'rotate0';
+    // If hand was swapped/rotated, munoShoutedBy was transferred in sync with the hand.
+    // If not previously shouted, grant grace on the exact turn of the swap/rotate.
+    const munoResult = (isSwapOrRotate && remainingCards === 1 && !gs.munoShoutedBy[myIdx])
+      ? null
+      : checkMunoRule(remainingCards, !!gs.munoShoutedBy[myIdx], config);
+
     if (munoResult === 'penalty') {
       ensureDeckHasCards(gs, 5);
       const drawn = gs.drawPile.splice(0, 2);
