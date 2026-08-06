@@ -83,7 +83,7 @@ export function Home({
             fontFamily: 'var(--font-code)',
             fontWeight: 800,
           }}>
-            v0.9.9.8888-alpha · By Dr.MetaCodeX
+            v0.9.9.8888-alpha.2 · By Dr.MetaCodeX
           </div>
         </div>
 
