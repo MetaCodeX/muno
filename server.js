@@ -520,6 +520,13 @@ io.on('connection', (socket) => {
     });
     if (room.moveHistory.length > 200) room.moveHistory = room.moveHistory.slice(-200);
 
+    // ── Set active color ───────────────────────────────────────────────────────
+    if (card.color === 'wild' && chosenColor) {
+      gs.currentColor = chosenColor;
+    } else if (card.color !== 'wild') {
+      gs.currentColor = card.color;
+    }
+
     // ── Apply card effect (engine) ────────────────────────────────────────────
     const numPlayers = room.players.length;
     const { nextStep, newDir, effectName, ...effectData } = applyCardEffect(card, gs, {
@@ -529,14 +536,8 @@ io.on('connection', (socket) => {
       io,
       config,
       targetIdx: chosenTarget,  // for card 7 swap in Overkill
+      chosenColor,              // for flush / wild cards
     });
-
-    // ── Set active color ───────────────────────────────────────────────────────
-    if (card.color === 'wild' && chosenColor) {
-      gs.currentColor = chosenColor;
-    } else if (card.color !== 'wild') {
-      gs.currentColor = card.color;
-    }
     // If wild and no chosenColor, color stays as was (shouldn't happen)
 
     // ── MUNO rule ─────────────────────────────────────────────────────────────

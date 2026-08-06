@@ -76,10 +76,11 @@ function effectDice(gs, ctx) {
 }
 
 function effectFlush(gs, ctx) {
-  const { myIdx, io, room } = ctx;
-  const topColor = gs.currentColor;
-  const flushed = (gs.hands[myIdx] || []).filter(c => c.color === topColor);
-  gs.hands[myIdx] = (gs.hands[myIdx] || []).filter(c => c.color !== topColor);
+  const { myIdx, io, room, chosenColor } = ctx;
+  const targetColor = (chosenColor || gs.currentColor || '').toLowerCase();
+  const hand = gs.hands[myIdx] || [];
+  const flushed = hand.filter(c => (c.color || '').toLowerCase() === targetColor);
+  gs.hands[myIdx] = hand.filter(c => (c.color || '').toLowerCase() !== targetColor);
   // Return flushed cards to draw pile
   gs.drawPile = [...gs.drawPile, ...flushed];
   gs.drawStackCount = 0;
@@ -87,11 +88,11 @@ function effectFlush(gs, ctx) {
     const pName = room.players[myIdx]?.username || 'Jugador';
     io.to(room.code).emit('chat:message', {
       system: true,
-      text: `🌊 ¡${pName} ejecutó Flush y descartó ${flushed.length} cartas ${topColor}!`,
+      text: `🌊 ¡${pName} ejecutó Flush y descartó ${flushed.length} cartas de color ${targetColor}!`,
       timestamp: Date.now()
     });
   }
-  return { nextStep: 1, newDir: gs.direction, effectName: 'flush', flushedCount: flushed.length };
+  return { nextStep: 1, newDir: gs.direction, effectName: 'flush', flushedCount: flushed.length, chosenColor: targetColor };
 }
 
 // Overkill: card 0 — rotate all hands in direction of play
