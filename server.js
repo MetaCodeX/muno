@@ -218,7 +218,12 @@ function broadcastGameState(room) {
   }
 }
 
-// ─── PURGE HELPERS ────────────────────────────────────────────────────────────
+// ─── PURGE & LOGGING HELPERS ──────────────────────────────────────────────────
+
+function logRoomEvent(roomCode, username, action, details = '') {
+  const time = new Date().toLocaleTimeString();
+  console.log(`📡 [${time}] [ROOM ${roomCode}] ${username || 'System'} -> ${action} ${details}`);
+}
 
 function purgeDisconnectedPlayers(room) {
   const disconnected = room.players.filter(p => !p.connected);
@@ -353,6 +358,8 @@ io.on('connection', (socket) => {
       }
     }
 
+    logRoomEvent(code, player.username, 'JOIN_ROOM');
+
     socket.join(code);
     socket.emit('room:joined', {
       sessionId,
@@ -444,6 +451,8 @@ io.on('connection', (socket) => {
     room.status = 'playing';
     room.gameState = initGameState(room);  // ← uses room.config from engine
 
+    logRoomEvent(room.code, room.players[0]?.username, 'START_GAME');
+
     io.to(room.code).emit('game:started', {
       players: room.players.map(p => ({ sessionId: p.sessionId, username: p.username, color: p.color, playerIdx: p.playerIdx })),
       mode: room.config.mode
@@ -474,6 +483,8 @@ io.on('connection', (socket) => {
     if (!canPlay(card, topCard, gs.currentColor, gs.drawStackCount, config)) {
       return socket.emit('game:error', { message: 'No puedes jugar esa carta.' });
     }
+
+    logRoomEvent(room.code, room.players[myIdx]?.username, 'PLAY_CARD', `${card.name} (target: ${chosenTarget ?? 'none'}, color: ${chosenColor || 'none'})`);
 
     // Remove card from hand
     gs.hands[myIdx] = hand.filter((_, i) => i !== cardIdx);
@@ -658,6 +669,8 @@ io.on('connection', (socket) => {
     } else {
       gs.drawsThisTurn = (gs.drawsThisTurn || 0) + 1;
     }
+
+    logRoomEvent(room.code, room.players[myIdx]?.username, 'DRAW_CARD', `(count: ${drawCount})`);
 
     const drawn = gs.drawPile.splice(0, drawCount);
     gs.hands[myIdx] = [...(gs.hands[myIdx] || []), ...drawn];
