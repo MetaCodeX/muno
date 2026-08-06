@@ -385,7 +385,6 @@ io.on('connection', (socket) => {
     const isAdmin = room?.adminSessionId === sessionId;
     console.log('[setMode] room:', room?.code, '| isAdmin:', isAdmin, '| status:', room?.status);
     if (!room || !isAdmin) return;
-    if (room.status !== 'lobby') return socket.emit('room:error', { message: 'No se puede cambiar el modo durante una partida.' });
 
     const validModes = ['classic', 'overkill'];
     if (!validModes.includes(mode)) return;
@@ -393,10 +392,18 @@ io.on('connection', (socket) => {
     room.config = createConfig(mode, overrides || {});
     const newMode = room.config.mode;
     console.log('[setMode] emitting lobby:update, mode now:', newMode);
+
+    if (room.status === 'playing' && room.gameState) {
+      room.gameState.mode = newMode;
+      room.gameState.config = clientConfig(room.config);
+      room.gameState._config = room.config;
+      broadcastGameState(room);
+    }
+
     io.to(room.code).emit('lobby:update', buildLobbyState(room));
     io.to(room.code).emit('chat:message', {
       system: true,
-      text: newMode === 'overkill' ? 'Modo cambiado a Overkill.' : 'Modo cambiado a Clasico.',
+      text: newMode === 'overkill' ? '🔥 ¡Modo cambiado a OVERKILL en vivo con todas las reglas activadas!' : 'Modo cambiado a Clasico.',
       timestamp: Date.now()
     });
   });
