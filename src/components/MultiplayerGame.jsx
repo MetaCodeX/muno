@@ -393,16 +393,24 @@ export function MultiplayerGame({
   };
 
   const handleCardClick = (card) => {
+    console.log('🃏 [MUNO DEBUG] Card clicked:', card.id, card.name, '| color:', card.color, '| value:', card.value);
+    console.log('   ↳ Turn State -> isMyTurn:', isMyTurn, '(myIdx:', myIdx, 'currentTurnIdx:', currentTurnIdx, ') | topCard:', topCard);
+
     if (!isMyTurn) {
       if (canJumpInCard(card)) {
+        console.log('   ⚡ Jump-in triggered for card:', card.id);
         onJumpIn(card.id);
       } else {
+        console.warn('   ⚠️ Click ignored: Not your turn!');
         setSelectedCardId(null);
       }
       return;
     }
 
-    if (!canPlayCard(card)) {
+    const playable = canPlayCard(card);
+    console.log('   ↳ canPlayCard evaluation:', playable);
+    if (!playable) {
+      console.warn('   ⚠️ Card is not playable against top card:', topCard);
       setSelectedCardId(null);
       return;
     }
@@ -411,6 +419,7 @@ export function MultiplayerGame({
 
     // Overkill: card 0 triggers rotate modal
     if (isOverkill && gameConfig?.zeroRotatesHands && card.value === '0' && card.color !== 'wild') {
+      console.log('   🌀 Opening Zero Rotate Modal for card:', card.id);
       setPendingCard(card);
       setShowZeroPicker(true);
       return;
@@ -418,16 +427,20 @@ export function MultiplayerGame({
 
     // Overkill: card 7 triggers swap picker
     if (isOverkill && gameConfig?.sevenSwapsHands && card.value === '7' && card.color !== 'wild') {
+      console.log('   🔄 Opening Seven Swap Modal for card:', card.id);
       setPendingCard(card);
       setShowSwapPicker(true);
       return;
     }
 
     if (card.color === 'wild') {
+      console.log('   🎨 Opening Wildcard Color Picker for card:', card.id);
       setPendingCard(card);
       setShowColorPicker(true);
       return;
     }
+
+    console.log('   ✅ Executing onPlayCard:', card.id);
     onPlayCard(card.id, null);
   };
 
@@ -808,6 +821,7 @@ export function MultiplayerGame({
             return (
               <div
                 key={card.id}
+                onClick={() => handleCardClick(card)}
                 style={{
                   width: cardW,
                   marginLeft: isSelected && isMobile ? '8px' : marginLeft,
