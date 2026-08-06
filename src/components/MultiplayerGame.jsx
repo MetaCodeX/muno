@@ -549,7 +549,7 @@ export function MultiplayerGame({
         >
           <Trophy size={isMobile ? 9 : 12} />
         </button>
-        <span style={{ fontSize: isMobile ? '0.48rem' : '0.58rem', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-code)', marginLeft: '0.2rem' }}>v0.9.9.8888-alpha.3</span>
+        <span style={{ fontSize: isMobile ? '0.48rem' : '0.58rem', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-code)', marginLeft: '0.2rem' }}>v0.9.9.8888-alpha.4</span>
         {isOverkill && (
           <span style={{
             fontSize: isMobile ? '0.45rem' : '0.55rem', fontWeight: 900,

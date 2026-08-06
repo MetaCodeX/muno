@@ -76,13 +76,21 @@ function effectDice(gs, ctx) {
 }
 
 function effectFlush(gs, ctx) {
-  const { myIdx } = ctx;
+  const { myIdx, io, room } = ctx;
   const topColor = gs.currentColor;
-  const flushed = gs.hands[myIdx].filter(c => c.color === topColor);
-  gs.hands[myIdx] = gs.hands[myIdx].filter(c => c.color !== topColor);
+  const flushed = (gs.hands[myIdx] || []).filter(c => c.color === topColor);
+  gs.hands[myIdx] = (gs.hands[myIdx] || []).filter(c => c.color !== topColor);
   // Return flushed cards to draw pile
   gs.drawPile = [...gs.drawPile, ...flushed];
   gs.drawStackCount = 0;
+  if (io && room) {
+    const pName = room.players[myIdx]?.username || 'Jugador';
+    io.to(room.code).emit('chat:message', {
+      system: true,
+      text: `🌊 ¡${pName} ejecutó Flush y descartó ${flushed.length} cartas ${topColor}!`,
+      timestamp: Date.now()
+    });
+  }
   return { nextStep: 1, newDir: gs.direction, effectName: 'flush', flushedCount: flushed.length };
 }
 
